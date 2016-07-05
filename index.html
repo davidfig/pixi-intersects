@@ -1,0 +1,200 @@
+<head>
+    <script src="https://rawgit.com/pixijs/pixi.js/dev/bin/pixi.js"></script>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/ascetic.min.css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/highlight.min.js"></script>
+    <script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
+    <script src="https://rawgit.com/davidfig/update/master/update.js"></script>
+    <script src="https://rawgit.com/davidfig/animate/master/animate.js"></script>
+    <script src="https://rawgit.com/davidfig/animate/master/easing.js"></script>
+
+    <!-- for local testing
+        <script src="../../www/external/pixi.js/bin/pixi.js"></script>
+        <script src="../renderer/renderer.js"></script>
+        <script src="../update/update.js"></script>
+        <script src="../animate/animate.js"></script>
+        <script src="../animate/easing.js"></script>
+    -->
+
+    <script src="intersects.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .title {
+            margin-top: 1%;
+            margin-left: 15%;
+            font-size: 200%;
+        }
+        #code {
+            left: 15%;
+            position: absolute;
+            word-wrap: break-word;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Example for <a href="https://github.com/davidfig/intersects/">github.com/davidfig/intersects/</a></div>
+    <pre><code class="javascript" id="code"></code></pre>
+    <script id="sample">
+
+        // set up renderer
+        var renderer;
+        pixi();
+
+        // create examples
+        pointInContainer(100, 100);
+        lineLine(100, 350);
+        lineContainerRotated(800, 100);
+        containerContainerRotated(950, 400);
+
+        // point and container
+        function pointInContainer(x, y)
+        {
+            var s = square(100, 0x00ff00, x, y);
+            var c = circle(5, 0, x, y);
+            text('point-container', x, y + 68);
+            Animate.to(c, {x: x * 2, y: y * 1.25}, 2000, {renderer: renderer, reverse: true, repeat: true, onEach: function()
+                {
+                    s.tint = Intersects.pointContainer(c.position, s) ? 0xff0000 : 0x00ff00;
+                }}, Easing.easeInOutSine);
+        }
+
+        // line and line
+        function lineLine(x, y)
+        {
+            var g = renderer.addChild(new PIXI.Graphics());
+            g.alpha = 0.5;
+            text('line-line', x, y + 118);
+            var l1 = {x: x, y: y};
+            var l2 = {x: x, y: y + 100};
+            var p1 = {x: x + 100, y: y};
+            var p2 = {x: x + 50, y: y + 100};
+            var move = {x: 0};
+            Animate.to(p1, {x: x - 75}, 2750, {renderer: renderer, reverse: true, repeat: true, onEach: function()
+                {
+                    g.clear();
+                    line(g, l1, l2, 0);
+                    var intersect = Intersects.lineLine(l1, l2, p1, p2);
+                    line(g, p1, p2, intersect ? 0xff0000 : 0x00ff00);
+                }}, Easing.easeInOutSine);
+        }
+
+        // line and non-axis aligned rectangle
+        function lineContainerRotated(x, y)
+        {
+            var g = renderer.addChild(new PIXI.Graphics());
+            g.alpha = 0.5;
+            text('line-container (non-axis aligned)', x, y + 118);
+            var p1 = new PIXI.Point(x, y);
+            var p2 = new PIXI.Point(x, y + 100);
+            line(g, p1, p2, 0);
+            var s = square(50, 0x00ff00, x + 100, y + 50);
+            s.alpha = 0.5;
+            Animate.to(s, {x: x - 100, y: y - 75, rotation: 2 * Math.PI}, 3000, {onEach: function()
+                {
+                    var intersect = Intersects.lineContainerRotated(p1, p2, s);
+                    s.tint = intersect ? 0xff0000 : 0x00ff00;
+                }, reverse: true, repeat: true}, Easing.easeInOutSine);
+
+        }
+
+        // two non-axis aligned rectangles
+        function containerContainerRotated(x, y)
+        {
+            var s1 = square(100, 0x00ff00, x - 200, y - 50);
+            var s2 = square(75, 0x00ff00, x, y);
+            s1.alpha = s2.alpha = 0.5;
+            text('container-container\n(non-axis aligned)', x - 100, y + 110);
+            Animate.to(s1, {x: x + 100, y: y + 75, rotation: Math.PI * 2}, 4000, {onEach: function()
+                {
+                    var intersect = Intersects.containerContainerRotated(s1, s2, renderer.stage);
+                    s1.tint = s2.tint = intersect ? 0xff0000 : 0x00ff00;
+                }, reverse: true, repeat: true}, Easing.easeInOutSine);
+            Animate.to(s2, {x: x - 200, y: y - 25, rotation: Math.PI}, 3000, {repeat: true, reverse: true}, Easing.easeInOutSine);
+        }
+
+        // initialize renderer and update loop for animation (see github.com/davidfig/renderer/, github.com/davidfig/update, and github.com/davidfig/animate)
+        function pixi()
+        {
+            Update.init();
+            renderer = new Renderer({transparent: true});
+            Update.update();
+        }
+
+        // draw a square
+        function square(size, color, x, y)
+        {
+            var sprite = PIXI.Sprite.fromImage('box.png');
+            renderer.addChild(sprite);
+            sprite.anchor.set(0.5);
+            sprite.width = sprite.height = size;
+            sprite.position.set(x, y);
+            sprite.tint = color;
+            return sprite;
+        }
+
+        // draw a triangle (for future expansion)
+        function triangle(size, color)
+        {
+            var half = size / 2;
+            var g = new PIXI.Graphics();
+            renderer.addChild(g);
+            g.beginFill(color);
+            g.moveTo(0, -half);
+            g.lineTo(-half, half);
+            g.lineTo(half, half);
+            g.closePath();
+            g.endFill();
+            return g;
+        }
+
+        // draw a circle
+        function circle(size, color, x, y)
+        {
+            var half = size / 2;
+            var g = new PIXI.Graphics();
+            renderer.addChild(g);
+            g.beginFill(color);
+            g.drawCircle(half, half, half);
+            g.endFill();
+            g.position.set(x, y);
+            return g;
+        }
+
+        // draw a line
+        function line(g, p1, p2, color)
+        {
+            g.lineStyle(10, color);
+            g.moveTo(p1.x, p1.y);
+            g.lineTo(p2.x, p2.y);
+        }
+
+        // draw text
+        function text(text, x, y)
+        {
+            var c = renderer.addChild(new PIXI.Container());
+            var back = c.addChild(PIXI.Sprite.fromImage('box.png'));
+            back.anchor.set(0.5);
+            back.tint = 0;
+            back.alpha = 0.1;
+            var words = c.addChild(new PIXI.Text(text, {fontSize: '14px', align: 'center'}));
+            words.anchor.set(0.5);
+            c.position.set(x, y);
+            back.width = words.width * 1.25;
+            back.height = words.height * 1.25;
+        }
+
+    </script>
+    <script>
+        window.onload = function()
+        {
+            var code = document.getElementById('code');
+            var script = document.getElementById('sample');
+            code.innerHTML = script.innerHTML;
+            hljs.highlightBlock (code);
+        };
+    </script>
+</body>
