@@ -112,7 +112,7 @@ function lineContainerRotated(originalP1, originalP2, c)
            Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, hh, -hw, -hh);
 }
 
-function getRotatedBoundingBox(c, world)
+function getRotatedBoundingBox(c)
 {
     var halfWidth = (c.width / c.scale.x) / 2;
     var halfHeight = (c.height / c.scale.y) / 2;
@@ -125,10 +125,10 @@ function getRotatedBoundingBox(c, world)
 }
 
 // from http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
-function containerContainerRotated(c1, c2, world)
+function containerContainerRotated(c1, c2)
 {
-    var a = getRotatedBoundingBox(c1, world);
-    var b = getRotatedBoundingBox(c2, world);
+    var a = getRotatedBoundingBox(c1);
+    var b = getRotatedBoundingBox(c2);
     var polygons = [a, b];
     var minA, maxA, projected, i, i1, j, minB, maxB;
     for (i = 0; i < polygons.length; i++) {
