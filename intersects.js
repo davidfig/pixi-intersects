@@ -39,6 +39,7 @@ function rectangleRectangleCorners(box1, box2)
     }
 }
 
+// detects collision of two axis-aligned rectangles based on top-left coordinate and width/height
 function rectangleRectangleSize(x1, y1, w1, h1, x2, y2, w2, h2)
 {
     if (x1 + w1 < x2 || x2 + w2 < x1 || y1 + h1 < y2 || y2 + h2 < y1)
@@ -51,6 +52,10 @@ function rectangleRectangleSize(x1, y1, w1, h1, x2, y2, w2, h2)
     }
 }
 
+// detects collision of two lines
+// PARAMS:
+//      (p0, p1, p2, p3) or
+//      (x0, y0, x1, y1, x2, y2, x3, y3)
 // from http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 function lineLine()
 {
@@ -90,6 +95,8 @@ function lineLine()
     return (s >= 0 && s <= 1 && t >= 0 && t <= 1);
 }
 
+// detects collision of a line and a PIXI.Container that is axis-aligned
+// (i.e., scale and translate is okay, but rotation is not)
 function lineContainer(x0, y0, x1, y1, c)
 {
     var hw = c.width / 2;
@@ -100,10 +107,11 @@ function lineContainer(x0, y0, x1, y1, c)
            Intersects.lineLine(x0, y0, x1, y1, c.x - hw, c.y + hh, c.x - hw, c.y - hh);
 }
 
-function lineContainerRotated(originalP1, originalP2, c)
+// detects collision of a line and a PIXI.Container
+function lineContainerRotated(point1, point2, c)
 {
-    var p1 = c.worldTransform.applyInverse(originalP1);
-    var p2 = c.worldTransform.applyInverse(originalP2);
+    var p1 = c.worldTransform.applyInverse(point1);
+    var p2 = c.worldTransform.applyInverse(point2);
     var hw = c._texture.orig.width / 2;
     var hh = c._texture.orig.height / 2;
     return Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, -hh, hw, -hh) ||
@@ -124,6 +132,7 @@ function getRotatedBoundingBox(c)
     return vertices;
 }
 
+// detects collision of two PIXI.Containers using their world transforms
 // from http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
 function containerContainerRotated(c1, c2)
 {
