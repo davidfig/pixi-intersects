@@ -2,10 +2,12 @@
     <script src="https://rawgit.com/pixijs/pixi.js/dev/bin/pixi.js"></script>
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/ascetic.min.css">
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/highlight.min.js"></script>
+
     <script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
     <script src="https://rawgit.com/davidfig/update/master/update.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/animate.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/easing.js"></script>
+    <script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>
 
     <!-- for local testing
         <script src="../../www/external/pixi.js/bin/pixi.js"></script>
@@ -13,9 +15,9 @@
         <script src="../update/update.js"></script>
         <script src="../animate/animate.js"></script>
         <script src="../animate/easing.js"></script>
+        <script src="intersects.js"></script>
     -->
 
-    <script src="intersects.js"></script>
 
     <style>
         body {
@@ -29,9 +31,19 @@
         }
         #code {
             left: 15%;
+            width: 80%;
             position: absolute;
             word-wrap: break-word;
             z-index: -1;
+        }
+        .hljs {
+            display: block;
+            overflow-x: auto;
+            padding: 0.5em;
+            background: rgba(0, 0, 100, 0.02);
+        }
+        .hljs-comment {
+            color: blue;
         }
     </style>
 </head>
