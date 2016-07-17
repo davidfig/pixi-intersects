@@ -192,7 +192,7 @@ var Intersects = {
     lineContainerRotated: lineContainerRotated,
     rectangleRectangleSize: rectangleRectangleSize,
     containerContainerRotated: containerContainerRotated,
-    circle: circle
+    circleCircle: circleCircle
 };
 
 // add support for AMD (Asynchronous Module Definition) libraries such as require.js.
