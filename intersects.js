@@ -176,6 +176,14 @@ function containerContainerRotated(c1, c2)
     return true;
 }
 
+// two circles with radius c1.width / 2 and c2.width / 2
+function circleCircle(c1, c2)
+{
+    var r1 = c1.width / 2;
+    var r2 = c2.width / 2;
+    return Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2) <= Math.pow(r2 + r1, 2);
+}
+
 // exports
 var Intersects = {
     pointContainer: pointContainer,
@@ -183,7 +191,8 @@ var Intersects = {
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainerRotated: lineContainerRotated,
     rectangleRectangleSize: rectangleRectangleSize,
-    containerContainerRotated: containerContainerRotated
+    containerContainerRotated: containerContainerRotated,
+    circle: circle
 };
 
 // add support for AMD (Asynchronous Module Definition) libraries such as require.js.
