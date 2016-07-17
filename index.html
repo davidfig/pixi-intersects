@@ -7,7 +7,9 @@
     <script src="https://rawgit.com/davidfig/update/master/update.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/animate.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/easing.js"></script>
-    <script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>
+    <!--<script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>-->
+    <script src="../intersects/intersects.js"></script>
+
 
     <!-- for local testing
         <script src="../../www/external/pixi.js/bin/pixi.js"></script>
@@ -61,6 +63,7 @@
         lineLine(100, 350);
         lineContainerRotated(800, 100);
         containerContainerRotated(950, 400);
+        circleCircle(300, 300);
 
         // point and container
         function pointInContainer(x, y)
@@ -128,6 +131,20 @@
             Animate.to(s2, {x: x - 200, y: y - 25, rotation: Math.PI}, 3000, {repeat: true, reverse: true}, Easing.easeInOutSine);
         }
 
+        function circleCircle(x, y)
+        {
+            var c1 = circle(50, 0x00ff00, x - 100, y);
+            var c2 = circle(74, 0x00ff00, x + 100, y + 50);
+            text('circle-circle', x, y + 100);
+            c1.alpha = c2.alpha = 0.5;
+            Animate.to(c1, {x: x + 100, y: y + 25}, 1000, {repeat: true, reverse: true, onEach: function()
+                {
+                    var intersect = Intersects.circleCircle(c1, c2);
+                    c1.tint = c2.tint = intersect ? 0xff0000 : 0x00ff00;
+                }}, Easing.easeInOutSine);
+            Animate.to(c2, {x: x - 100, y: y - 25}, 750, {repeat: true, reverse: true}, Easing.easeInOutSine);
+        }
+
         // initialize renderer and update loop for animation (see github.com/davidfig/renderer/, github.com/davidfig/update, and github.com/davidfig/animate)
         function pixi()
         {
@@ -166,14 +183,12 @@
         // draw a circle
         function circle(size, color, x, y)
         {
-            var half = size / 2;
-            var g = new PIXI.Graphics();
-            renderer.addChild(g);
-            g.beginFill(color);
-            g.drawCircle(half, half, half);
-            g.endFill();
-            g.position.set(x, y);
-            return g;
+            var circle = PIXI.Sprite.fromImage('circle.png');
+            circle.width = circle.height = size;
+            renderer.addChild(circle);
+            circle.tint = color;
+            circle.position.set(x, y);
+            return circle;
         }
 
         // draw a line
