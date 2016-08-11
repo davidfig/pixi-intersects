@@ -27,6 +27,27 @@ function pointContainer()
     return (point.x >= c.x - hw && point.x <= c.x + hw && point.y >= c.y - hh && point.y <= c.y + hh);
 }
 
+// arguments: (x, y | PIXI.Point), rectange {x, y, width, height}, [buffer to enlarge hit area]
+function pointBox()
+{
+    var point, rect, buffer;
+    if (!isNaN(arguments[0]))
+    {
+        point = new PIXI.Point(arguments[0], arguments[1]);
+        rect = arguments[2];
+        buffer = arguments[3] || 0;
+    }
+    else
+    {
+        point = arguments[0];
+        rect = arguments[1];
+        buffer = arguments[2] || 0;
+    }
+    var hw = rect.width / 2 + buffer;
+    var hh = rect.height / 2 + buffer;
+    return (point.x >= rect.x - hw && point.x <= rect.x + hw && point.y >= rect.y - hh && point.y <= rect.y + hh);
+}
+
 function rectangleRectangleCorners(box1, box2)
 {
     if (box1.x2 < box2.x1 || box2.x2 < box1.x1 || box1.y2 < box2.y1 || box2.y2 < box1.y1)
@@ -187,6 +208,7 @@ function circleCircle(c1, c2)
 // exports
 var Intersects = {
     pointContainer: pointContainer,
+    pointBox: pointBox,
     lineLine: lineLine,
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainerRotated: lineContainerRotated,
