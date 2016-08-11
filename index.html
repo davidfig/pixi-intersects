@@ -3,23 +3,18 @@
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/ascetic.min.css">
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/highlight.min.js"></script>
 
-    <script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
+    <!--<script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
     <script src="https://rawgit.com/davidfig/update/master/update.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/animate.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/easing.js"></script>
-    <!--<script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>-->
+    <script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>-->
+
+    <!-- for local testing -->
+    <script src="../renderer/renderer.js"></script>
+    <script src="../update/update.js"></script>
+    <script src="../animate/animate.js"></script>
+    <script src="../animate/easing.js"></script>
     <script src="../intersects/intersects.js"></script>
-
-
-    <!-- for local testing
-        <script src="../../www/external/pixi.js/bin/pixi.js"></script>
-        <script src="../renderer/renderer.js"></script>
-        <script src="../update/update.js"></script>
-        <script src="../animate/animate.js"></script>
-        <script src="../animate/easing.js"></script>
-        <script src="intersects.js"></script>
-    -->
-
 
     <style>
         body {
@@ -60,6 +55,7 @@
 
         // create examples
         pointInContainer(100, 100);
+        pointInBox(600, 120);
         lineLine(100, 350);
         lineContainerRotated(800, 100);
         containerContainerRotated(950, 400);
@@ -74,6 +70,21 @@
             Animate.to(c, {x: x * 2, y: y * 1.25}, 2000, {renderer: renderer, reverse: true, repeat: true, onEach: function()
                 {
                     s.tint = Intersects.pointContainer(c.position, s) ? 0xff0000 : 0x00ff00;
+                }}, Easing.easeInOutSine);
+        }
+
+        // point and box
+        function pointInBox(x, y)
+        {
+            var buffer = square(100, 0, x, y);
+            buffer.alpha = 0.25;
+            var s = square(80, 0x00ff00, x, y);
+            var rect = {x: s.x, y: y, width: s.width, height: s.height};
+            var c = circle(5, 0, x, y);
+            text('point-box (buffer)', x, y + 68);
+            Animate.to(c, {x: x - 100, y: y - 20}, 3000, {renderer: renderer, reverse: true, repeat: true, onEach: function()
+                {
+                    s.tint = Intersects.pointBox(c.position, rect, 20) ? 0xff0000 : 0x00ff00;
                 }}, Easing.easeInOutSine);
         }
 
@@ -150,6 +161,7 @@
         {
             Update.init();
             renderer = new Renderer({transparent: true});
+            renderer.canvas.style.pointerEvents = 'none';
             Update.update();
         }
 
