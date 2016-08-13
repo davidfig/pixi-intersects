@@ -80,11 +80,11 @@
             buffer.alpha = 0.25;
             var s = square(80, 0x00ff00, x, y);
             var rect = {x: s.x, y: y, width: s.width, height: s.height};
-            var c = circle(5, 0, x, y);
+            var c = circle(5, 0, x + 75, y);
             text('point-box (buffer)', x, y + 68);
-            Animate.to(c, {x: x - 100, y: y - 20}, 3000, {renderer: renderer, reverse: true, repeat: true, onEach: function()
+            Animate.to(c, {x: x - 100, y: y - 20}, 4000, {renderer: renderer, reverse: true, repeat: true, onEach: function()
                 {
-                    s.tint = Intersects.pointBox(c.position, rect, 20) ? 0xff0000 : 0x00ff00;
+                    s.tint = Intersects.pointBox(c.position, rect, 10) ? 0xff0000 : 0x00ff00;
                 }}, Easing.easeInOutSine);
         }
 
