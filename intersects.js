@@ -61,8 +61,36 @@ function rectangleRectangleCorners(box1, box2)
 }
 
 // detects collision of two axis-aligned rectangles based on top-left coordinate and width/height
-function rectangleRectangleSize(x1, y1, w1, h1, x2, y2, w2, h2)
+// x1, y1, w1, h1, x2, y2, w2, h2
+// or
+// rect1, rect2
+function rectangleRectangleSize()
 {
+    var x1, y1, w1, h1, x2, y2, w2, h2;
+    if (arguments.length === 2)
+    {
+        var rect1 = arguments[0];
+        var rect2 = arguments[1];
+        x1 = rect1.x;
+        y1 = rect1.y;
+        w1 = rect1.width;
+        h1 = rect1.height;
+        x2 = rect2.x;
+        y2 = rect2.y;
+        w2 = rect2.width;
+        h2 = rect2.height;
+    }
+    else
+    {
+        x1 = arguments[0];
+        y1 = arguments[1];
+        w1 = arguments[2];
+        h1 = arguments[3];
+        x2 = arguments[4];
+        y2 = arguments[5];
+        w2 = arguments[6];
+        h2 = arguments[7];
+    }
     if (x1 + w1 < x2 || x2 + w2 < x1 || y1 + h1 < y2 || y2 + h2 < y1)
     {
         return false;
