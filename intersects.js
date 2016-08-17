@@ -148,6 +148,16 @@ function lineLine()
 // (i.e., scale and translate is okay, but rotation is not)
 function lineContainer(x0, y0, x1, y1, c)
 {
+    if (arguments.length === 3)
+    {
+        var p1 = x0;
+        var p2 = y0;
+        c = x1;
+        x0 = p1.x;
+        y0 = p1.y;
+        x1 = p2.x;
+        y1 = p2.y;
+    }
     var hw = c.width / 2;
     var hh = c.height / 2;
     return Intersects.lineLine(x0, y0, x1, y1, c.x - hw, c.y - hh, c.x + hw, c.y - hh) ||
@@ -239,6 +249,7 @@ var Intersects = {
     pointBox: pointBox,
     lineLine: lineLine,
     rectangleRectangleCorners: rectangleRectangleCorners,
+    lineContainer: lineContainer,
     lineContainerRotated: lineContainerRotated,
     rectangleRectangleSize: rectangleRectangleSize,
     containerContainerRotated: containerContainerRotated,
