@@ -27,6 +27,27 @@ function pointContainer()
     return (point.x >= c.x - hw && point.x <= c.x + hw && point.y >= c.y - hh && point.y <= c.y + hh);
 }
 
+/**
+ * checks for intersection between point and circle
+ * @param {PIXI.Point} point coordinates
+ * @param {PIXI.Point} center of circle
+ * @param {number} radius of circle
+ */
+function pointCircle(point, circle, radius)
+{
+    var dx = Math.abs(point.x - circle.x);
+    var dy = Math.abs(point.y - circle.y);
+    if (dx > radius || dy > radius)
+    {
+        return false;
+    }
+    if (dx + dy < radius)
+    {
+        return true;
+    }
+    return (dx * dx + dy * dy <= radius * radius);
+}
+
 // arguments: (x, y | PIXI.Point), rectange {x, y, width, height}, [buffer to enlarge hit area]
 function pointBox()
 {
@@ -253,7 +274,8 @@ var Intersects = {
     lineContainerRotated: lineContainerRotated,
     rectangleRectangleSize: rectangleRectangleSize,
     containerContainerRotated: containerContainerRotated,
-    circleCircle: circleCircle
+    circleCircle: circleCircle,
+    pointCircle: pointCircle
 };
 
 // add support for AMD (Asynchronous Module Definition) libraries such as require.js.
