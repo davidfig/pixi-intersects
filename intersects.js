@@ -27,6 +27,27 @@ function pointContainer()
     return (point.x >= c.x - hw && point.x <= c.x + hw && point.y >= c.y - hh && point.y <= c.y + hh);
 }
 
+function localPointBox()
+{
+    var point, c, buffer;
+    if (!isNaN(arguments[0]))
+    {
+        point = new PIXI.Point(arguments[0], arguments[1]);
+        c = arguments[2];
+        buffer = arguments[3] || 0;
+    }
+    else
+    {
+        point = arguments[0];
+        c = arguments[1];
+        buffer = arguments[2] || 0;
+    }
+    c.toLocal(point, c, point);
+    var hw = c.width / 2 + buffer;
+    var hh = c.height / 2 + buffer;
+    return (point.x >= c.x - hw && point.x <= c.x + hw && point.y >= c.y - hh && point.y <= c.y + hh);
+}
+
 /**
  * checks for intersection between point and circle
  * @param {PIXI.Point} point coordinates
@@ -48,7 +69,13 @@ function pointCircle(point, circle, radius)
     return (dx * dx + dy * dy <= radius * radius);
 }
 
-// arguments: (x, y | PIXI.Point), rectange {x, y, width, height}, [buffer to enlarge hit area]
+/**
+ * checks if a point is in a box (where x, y is the center of the box)
+ * @param {PIXI.Point} point (or use x, y as first two arguments)
+ * @param {object} rectangle {centerX, centerY, width, height}
+ * @param {number} buffer - default = 0, used to enlarge hit area
+ * @return {boolean} true if point is in box
+ */
 function pointBox()
 {
     var point, rect, buffer;
