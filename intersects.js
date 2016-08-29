@@ -214,6 +214,14 @@ function lineContainer(x0, y0, x1, y1, c)
            Intersects.lineLine(x0, y0, x1, y1, c.x - hw, c.y + hh, c.x - hw, c.y - hh);
 }
 
+function lineAABB(p1, p2, AABB)
+{
+    return Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, AABB.x, AABB.y, AABB.x + AABB.width, AABB.y) ||
+           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, AABB.x + AABB.width, AABB.y, AABB.x + AABB.width, AABB.y + AABB.height) ||
+           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, AABB.x + AABB.width, AABB.y + AABB.height, AABB.x, AABB.y + AABB.height) ||
+           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, AABB.x, AABB.y + AABB.height, AABB.x, AABB.y);
+}
+
 // detects collision of a line and a PIXI.Container
 function lineContainerRotated(point1, point2, c)
 {
@@ -296,6 +304,7 @@ var Intersects = {
     pointContainer: pointContainer,
     pointBox: pointBox,
     lineLine: lineLine,
+    lineAABB: lineAABB,
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainer: lineContainer,
     lineContainerRotated: lineContainerRotated,
