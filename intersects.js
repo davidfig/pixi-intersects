@@ -108,6 +108,26 @@ function rectangleRectangleCorners(box1, box2)
     }
 }
 
+/**
+ * detects collision of two axis-aligned rectangles
+ * @param {object} AABB1
+ * @param {object} AABB1.x
+ * @param {object} AABB1.y
+ * @param {object} AABB1.width
+ * @param {object} AABB1.height
+ * @param {object} AABB2
+ * @param {object} AABB2.x
+ * @param {object} AABB2.y
+ * @param {object} AABB2.width
+ * @param {object} AABB2.height
+ * @return {boolean} is there a collision
+ */
+function AABB(AABB1, AABB2)
+{
+    return AABB1.x + AABB1.width < AABB2.x || AABB2.x + AABB2.width < AABB1.x ||
+           AABB1.y + AABB1.height < AABB2.y || AABB2.y + AABB2.height < AABB1.y;
+}
+
 // detects collision of two axis-aligned rectangles based on top-left coordinate and width/height
 // x1, y1, w1, h1, x2, y2, w2, h2
 // or
@@ -304,6 +324,7 @@ var Intersects = {
     pointContainer: pointContainer,
     pointBox: pointBox,
     lineLine: lineLine,
+    AABB: AABB,
     lineAABB: lineAABB,
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainer: lineContainer,
