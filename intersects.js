@@ -124,8 +124,8 @@ function rectangleRectangleCorners(box1, box2)
  */
 function AABB(AABB1, AABB2)
 {
-    return AABB1.x + AABB1.width < AABB2.x || AABB2.x + AABB2.width < AABB1.x ||
-           AABB1.y + AABB1.height < AABB2.y || AABB2.y + AABB2.height < AABB1.y;
+    return !(AABB1.x + AABB1.width < AABB2.x || AABB2.x + AABB2.width < AABB1.x ||
+           AABB1.y + AABB1.height < AABB2.y || AABB2.y + AABB2.height < AABB1.y);
 }
 
 // detects collision of two axis-aligned rectangles based on top-left coordinate and width/height
