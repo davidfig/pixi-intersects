@@ -1,0 +1,19 @@
+{
+  "name": "@yy/intersects",
+  "version": "1.0.0",
+  "description": "shape collision / intersects library for pixi.js",
+  "main": "intersects.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/davidfig/intersects.git"
+  },
+  "author": "david figatner",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/davidfig/intersects/issues"
+  },
+  "homepage": "https://github.com/davidfig/intersects#readme"
+}
