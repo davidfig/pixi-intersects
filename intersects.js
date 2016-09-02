@@ -262,10 +262,14 @@ function lineContainerRotated(point1, point2, c)
  * @param {PIXI.DisplayObject} c2
  * @return {boolean} collision
  */
-function containerContainerRotated(c1, c2)
+function displayObjects(c1, c2)
 {
-    var a = c1.vertexData;
-    var b = c2.vertexData;
+    var a = [], b = [];
+    for (var i = 0; i < 8; i += 2)
+    {
+        a.push({x: c1.vertexData[i], y: c1.vertexData[i + 1]});
+        b.push({x: c2.vertexData[i], y: c2.vertexData[i + 1]});
+    }
     var polygons = [a, b];
     var minA, maxA, projected, i, i1, j, minB, maxB;
     for (i = 0; i < polygons.length; i++) {
@@ -275,23 +279,25 @@ function containerContainerRotated(c1, c2)
             var p1 = polygon[i1];
             var p2 = polygon[i2];
             var normal = { x: p2.y - p1.y, y: p1.x - p2.x };
-            minA = maxA = undefined;
+            minA = maxA = null;
             for (j = 0; j < a.length; j++) {
                 projected = normal.x * a[j].x + normal.y * a[j].y;
-                if (minA === undefined || projected < minA) {
+                if (minA === null || projected < minA)
+                {
                     minA = projected;
                 }
-                if (maxA === undefined || projected > maxA) {
+                if (maxA === null || projected > maxA)
+                {
                     maxA = projected;
                 }
             }
-            minB = maxB = undefined;
+            minB = maxB = null;
             for (j = 0; j < b.length; j++) {
                 projected = normal.x * b[j].x + normal.y * b[j].y;
-                if (minB === undefined || projected < minB) {
+                if (minB === null || projected < minB) {
                     minB = projected;
                 }
-                if (maxB === undefined || projected > maxB) {
+                if (maxB === null || projected > maxB) {
                     maxB = projected;
                 }
             }
@@ -319,11 +325,12 @@ var Intersects = {
     lineLine: lineLine,
     AABB: AABB,
     lineAABB: lineAABB,
+    displayObjects: displayObjects,
+
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainer: lineContainer,
     lineContainerRotated: lineContainerRotated,
     rectangleRectangleSize: rectangleRectangleSize,
-    containerContainerRotated: containerContainerRotated,
     circleCircle: circleCircle,
     pointCircle: pointCircle
 };
