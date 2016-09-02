@@ -255,39 +255,29 @@ function lineContainerRotated(point1, point2, c)
            Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, hh, -hw, -hh);
 }
 
-/**
- * get vertex data for any PIXI object
- * from PIXI.Sprite.getVertices() implementation (MIT)
- * @param {PIXI.DisplayObject} c
- * @return {Array} array of 8 points [x0, y0, x1, y1, ...]
- */
-function getVertexData(object)
+// detects collision of a line and a PIXI.Container
+function lineContainerRotated(point1, point2, c)
 {
-    // if it exists, rely on PIXI's calculation
-    if (object.vertexData)
-    {
-        return object.vertexData;
-    }
+    var p1 = c.worldTransform.applyInverse(point1);
+    var p2 = c.worldTransform.applyInverse(point2);
+    var hw = c._texture.orig.width / 2;
+    var hh = c._texture.orig.height / 2;
+    return Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, -hh, hw, -hh) ||
+           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, hw, -hh, hw, hh) ||
+           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, hw, hh, -hw, hh) ||
+           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, hh, -hw, -hh);
+}
 
-    var wt = object.transform.worldTransform,
-        a = wt.a, b = wt.b, c = wt.c, d = wt.d, tx = wt.tx, ty = wt.ty,
-        vertexData = [],
-        w0, w1, h0, h1;
-
-    w0 = (object.width) / 2;
-    w1 = -w0;
-    h0 = (object.height) / 2;
-    h1 = -h0;
-
-    vertexData[0] = a * w1 + c * h1 + tx;
-    vertexData[1] = d * h1 + b * w1 + ty;
-    vertexData[2] = a * w0 + c * h1 + tx;
-    vertexData[3] = d * h1 + b * w0 + ty;
-    vertexData[4] = a * w0 + c * h0 + tx;
-    vertexData[5] = d * h0 + b * w0 + ty;
-    vertexData[6] = a * w1 + c * h0 + tx;
-    vertexData[7] = d * h0 + b * w1 + ty;
-    return vertexData;
+function getRotatedBoundingBox(c)
+{
+    var halfWidth = (c.width / c.scale.x) / 2;
+    var halfHeight = (c.height / c.scale.y) / 2;
+    var vertices = [];
+    vertices.push(c.toGlobal(new PIXI.Point(-halfWidth, -halfHeight)));
+    vertices.push(c.toGlobal(new PIXI.Point(+halfWidth, -halfHeight)));
+    vertices.push(c.toGlobal(new PIXI.Point(+halfWidth, +halfHeight)));
+    vertices.push(c.toGlobal(new PIXI.Point(-halfWidth, +halfHeight)));
+    return vertices;
 }
 
 /**
@@ -299,18 +289,8 @@ function getVertexData(object)
  */
 function displayObjects(c1, c2)
 {
-    var a = [], b = [];
-
-    // use vertexData if it exists, or calculate it based on width and height
-    var vertexData1 = c1.vertexData || getVertexData(c1);
-    var vertexData2 = c2.vertexData || getVertexData(c2);
-
-    // convert to {x, y}
-    for (var i = 0; i < 8; i += 2)
-    {
-        a.push({x: vertexData1[i], y: vertexData1[i + 1]});
-        b.push({x: vertexData2[i], y: vertexData2[i + 1]});
-    }
+    var a = getRotatedBoundingBox(c1);
+    var b = getRotatedBoundingBox(c2);
     var polygons = [a, b];
     var minA, maxA, projected, i, i1, j, minB, maxB;
     for (i = 0; i < polygons.length; i++) {
@@ -368,7 +348,6 @@ var Intersects = {
     AABB: AABB,
     lineAABB: lineAABB,
     displayObjects: displayObjects,
-    getVertexData: getVertexData,
 
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainer: lineContainer,
