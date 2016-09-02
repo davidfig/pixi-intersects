@@ -269,10 +269,13 @@ function getRotatedBoundingBox(c)
 
 // detects collision of two PIXI.Containers using their world transforms
 // from http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
-function containerContainerRotated(c1, c2)
+function containerContainerRotated(c1, c2, g)
 {
-    var a = getRotatedBoundingBox(c1);
-    var b = getRotatedBoundingBox(c2);
+    var a = c1.vertexData;
+    // getRotatedBoundingBox(c1);
+    var b = c2.vertexData;
+    // getRotatedBoundingBox(c2);
+
     var polygons = [a, b];
     var minA, maxA, projected, i, i1, j, minB, maxB;
     for (i = 0; i < polygons.length; i++) {
