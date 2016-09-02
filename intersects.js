@@ -285,10 +285,10 @@ function getAABBBox(AABB, stage)
     var width = (AABB.width / stage.scale.x);
     var height = (AABB.height / stage.scale.y);
     var vertices = [];
-    vertices.push(stage.toGlobal(new PIXI.Point(0, 0)));
-    vertices.push(stage.toGlobal(new PIXI.Point(width, 0)));
-    vertices.push(stage.toGlobal(new PIXI.Point(width, height)));
-    vertices.push(stage.toGlobal(new PIXI.Point(0, height)));
+    vertices.push(stage.toGlobal(new PIXI.Point(AABB.x, AABB.y)));
+    vertices.push(stage.toGlobal(new PIXI.Point(AABB.x + width, AABB.y)));
+    vertices.push(stage.toGlobal(new PIXI.Point(AABB.x + width, AABB.y + height)));
+    vertices.push(stage.toGlobal(new PIXI.Point(AABB.x, AABB.y + height)));
     return vertices;
 }
 
