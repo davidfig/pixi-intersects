@@ -61,7 +61,7 @@
         pointInBox(600, 120);
         lineLine(100, 350);
         lineContainerRotated(800, 100);
-        containerContainerRotated(950, 400);
+        displayObjects(950, 400);
         circleCircle(300, 300);
 
         // point and container
@@ -131,16 +131,21 @@
         }
 
         // two non-axis aligned rectangles
-        function containerContainerRotated(x, y)
+        function displayObjects(x, y)
         {
-            var s1 = square(100, 0x00ff00, x - 200, y - 50);
+            // test a container
+            var s1 = renderer.addChild(new PIXI.Container());
+            s1.position.set(x - 200, y - 50);
+            s1.addChild(square(100, 0x00ff00, 0, 0));
+
+            // test a sprite
             var s2 = square(75, 0x00ff00, x, y);
             s1.alpha = s2.alpha = 0.5;
-            text('container-container\n(non-axis aligned)', x - 100, y + 110);
+            text('Display Objects\n(non-axis aligned)', x - 100, y + 110);
             Animate.to(s1, {x: x + 100, y: y + 75, rotation: Math.PI * 2}, 4000, {onEach: function()
                 {
-                    var intersect = Intersects.containerContainerRotated(s1, s2, renderer.stage);
-                    s1.tint = s2.tint = intersect ? 0xff0000 : 0x00ff00;
+                    var intersect = Intersects.displayObjects(s1, s2);
+                    s1.children[0].tint = s2.tint = intersect ? 0xff0000 : 0x00ff00;
                 }, reverse: true, repeat: true}, Easing.easeInOutSine);
             Animate.to(s2, {x: x - 200, y: y - 25, rotation: Math.PI}, 3000, {repeat: true, reverse: true}, Easing.easeInOutSine);
         }
