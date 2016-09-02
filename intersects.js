@@ -280,6 +280,70 @@ function getRotatedBoundingBox(c)
     return vertices;
 }
 
+function getAABBBox(AABB, stage)
+{
+    var width = (AABB.width / stage.scale.x);
+    var height = (AABB.height / stage.scale.y);
+    var vertices = [];
+    vertices.push(stage.toGlobal(new PIXI.Point(0, 0)));
+    vertices.push(stage.toGlobal(new PIXI.Point(width, 0)));
+    vertices.push(stage.toGlobal(new PIXI.Point(width, height)));
+    vertices.push(stage.toGlobal(new PIXI.Point(0, height)));
+    return vertices;
+}
+
+/**
+ * detects collision betweeen a PIXI object and AABB using PIXI's world transforms and SAT
+ * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
+ * @param {PIXI.DisplayObject} object
+ * @param {object} AABB (x, y, width, height) based off top-left corner
+ * @param {PIXI.Container} stage - parent coordinates for AABB
+ * @return {boolean} collision
+ */
+function displayObjectAABB(object, AABB, stage)
+{
+    var a = getRotatedBoundingBox(object);
+    var b = getAABBBox(AABB, stage);
+    var polygons = [a, b];
+    var minA, maxA, projected, i, i1, j, minB, maxB;
+    for (i = 0; i < polygons.length; i++) {
+        var polygon = polygons[i];
+        for (i1 = 0; i1 < polygon.length; i1++) {
+            var i2 = (i1 + 1) % polygon.length;
+            var p1 = polygon[i1];
+            var p2 = polygon[i2];
+            var normal = { x: p2.y - p1.y, y: p1.x - p2.x };
+            minA = maxA = null;
+            for (j = 0; j < a.length; j++) {
+                projected = normal.x * a[j].x + normal.y * a[j].y;
+                if (minA === null || projected < minA)
+                {
+                    minA = projected;
+                }
+                if (maxA === null || projected > maxA)
+                {
+                    maxA = projected;
+                }
+            }
+            minB = maxB = null;
+            for (j = 0; j < b.length; j++) {
+                projected = normal.x * b[j].x + normal.y * b[j].y;
+                if (minB === null || projected < minB) {
+                    minB = projected;
+                }
+                if (maxB === null || projected > maxB) {
+                    maxB = projected;
+                }
+            }
+            if (maxA < minB || maxB < minA)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 /**
  * detects collision using PIXI's world transforms and SAT
  * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
@@ -348,6 +412,7 @@ var Intersects = {
     AABB: AABB,
     lineAABB: lineAABB,
     displayObjects: displayObjects,
+    displayObjectAABB: displayObjectAABB,
 
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainer: lineContainer,
