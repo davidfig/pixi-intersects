@@ -274,9 +274,9 @@ function getVertexData(object)
         vertexData = [],
         w0, w1, h0, h1;
 
-    w0 = object.width / 2 / object.scale.x;
+    w0 = (object.width / object.scale.x) / 2;
     w1 = -w0;
-    h0 = object.height / 2 / object.scale.y;
+    h0 = (object.height / object.scale.y) / 2;
     h1 = -h0;
 
     vertexData[0] = a * w1 + c * h1 + tx;
