@@ -255,27 +255,17 @@ function lineContainerRotated(point1, point2, c)
            Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, hh, -hw, -hh);
 }
 
-function getRotatedBoundingBox(c)
-{
-    var halfWidth = (c.width / c.scale.x) / 2;
-    var halfHeight = (c.height / c.scale.y) / 2;
-    var vertices = [];
-    vertices.push(c.toGlobal(new PIXI.Point(-halfWidth, -halfHeight)));
-    vertices.push(c.toGlobal(new PIXI.Point(+halfWidth, -halfHeight)));
-    vertices.push(c.toGlobal(new PIXI.Point(+halfWidth, +halfHeight)));
-    vertices.push(c.toGlobal(new PIXI.Point(-halfWidth, +halfHeight)));
-    return vertices;
-}
-
-// detects collision of two PIXI.Containers using their world transforms
-// from http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
-function containerContainerRotated(c1, c2, g)
+/**
+ * detects collision using PIXI's world transforms and SAT
+ * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
+ * @param {PIXI.DisplayObject} c1
+ * @param {PIXI.DisplayObject} c2
+ * @return {boolean} collision
+ */
+function containerContainerRotated(c1, c2)
 {
     var a = c1.vertexData;
-    // getRotatedBoundingBox(c1);
     var b = c2.vertexData;
-    // getRotatedBoundingBox(c2);
-
     var polygons = [a, b];
     var minA, maxA, projected, i, i1, j, minB, maxB;
     for (i = 0; i < polygons.length; i++) {
