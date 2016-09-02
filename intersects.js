@@ -256,6 +256,35 @@ function lineContainerRotated(point1, point2, c)
 }
 
 /**
+ * calculate vertex data for PIXI.Container for use in Intersects.displayObjects()
+ * from PIXI.Sprite.getVertices() implementation (MIT)
+ * @param {PIXI.Container} c
+ * @return {Array} array of 8 points [x0, y0, x1, y1, ...]
+ */
+function getVertexData(c)
+{
+    var wt = c.transform.worldTransform,
+        a = wt.a, b = wt.b, c = wt.c, d = wt.d, tx = wt.tx, ty = wt.ty,
+        vertexData = [],
+        w0, w1, h0, h1;
+
+    w0 = c.width / 2;
+    w1 = -w0;
+    h0 = c.height / 2;
+    h1 = -h0;
+
+    vertexData[0] = a * w1 + c * h1 + tx;
+    vertexData[1] = d * h1 + b * w1 + ty;
+    vertexData[2] = a * w0 + c * h1 + tx;
+    vertexData[3] = d * h1 + b * w0 + ty;
+    vertexData[4] = a * w0 + c * h0 + tx;
+    vertexData[5] = d * h0 + b * w0 + ty;
+    vertexData[6] = a * w1 + c * h0 + tx;
+    vertexData[7] = d * h0 + b * w1 + ty;
+    return vertexData;
+}
+
+/**
  * detects collision using PIXI's world transforms and SAT
  * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
  * @param {PIXI.DisplayObject} c1
@@ -265,10 +294,16 @@ function lineContainerRotated(point1, point2, c)
 function displayObjects(c1, c2)
 {
     var a = [], b = [];
+
+    // use vertexData if it exists, or calculate it based on width and height
+    var vertexData1 = c1.vertexData || getVertexData(c1);
+    var vertexData2 = c2.vertexData || getVertexData(c2);
+
+    // convert to {x, y}
     for (var i = 0; i < 8; i += 2)
     {
-        a.push({x: c1.vertexData[i], y: c1.vertexData[i + 1]});
-        b.push({x: c2.vertexData[i], y: c2.vertexData[i + 1]});
+        a.push({x: vertexData1[i], y: vertexData1[i + 1]});
+        b.push({x: vertexData2[i], y: vertexData2[i + 1]});
     }
     var polygons = [a, b];
     var minA, maxA, projected, i, i1, j, minB, maxB;
