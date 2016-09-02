@@ -261,22 +261,22 @@ function lineContainerRotated(point1, point2, c)
  * @param {PIXI.DisplayObject} c
  * @return {Array} array of 8 points [x0, y0, x1, y1, ...]
  */
-function getVertexData(c)
+function getVertexData(object)
 {
     // if it exists, rely on PIXI's calculation
-    if (c.vertexData)
+    if (object.vertexData)
     {
-        return c.vertexData;
+        return object.vertexData;
     }
 
-    var wt = c.transform.worldTransform,
+    var wt = object.transform.worldTransform,
         a = wt.a, b = wt.b, c = wt.c, d = wt.d, tx = wt.tx, ty = wt.ty,
         vertexData = [],
         w0, w1, h0, h1;
 
-    w0 = c.width / 2;
+    w0 = object.width / 2;
     w1 = -w0;
-    h0 = c.height / 2;
+    h0 = object.height / 2;
     h1 = -h0;
 
     vertexData[0] = a * w1 + c * h1 + tx;
