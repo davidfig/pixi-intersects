@@ -256,13 +256,19 @@ function lineContainerRotated(point1, point2, c)
 }
 
 /**
- * calculate vertex data for PIXI.Container for use in Intersects.displayObjects()
+ * get vertex data for any PIXI object
  * from PIXI.Sprite.getVertices() implementation (MIT)
- * @param {PIXI.Container} c
+ * @param {PIXI.DisplayObject} c
  * @return {Array} array of 8 points [x0, y0, x1, y1, ...]
  */
 function getVertexData(c)
 {
+    // if it exists, rely on PIXI's calculation
+    if (c.vertexData)
+    {
+        return c.vertexData;
+    }
+
     var wt = c.transform.worldTransform,
         a = wt.a, b = wt.b, c = wt.c, d = wt.d, tx = wt.tx, ty = wt.ty,
         vertexData = [],
@@ -358,9 +364,11 @@ var Intersects = {
     pointContainer: pointContainer,
     pointBox: pointBox,
     lineLine: lineLine,
+
     AABB: AABB,
     lineAABB: lineAABB,
     displayObjects: displayObjects,
+    getVertexData: getVertexData,
 
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainer: lineContainer,
