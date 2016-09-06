@@ -404,8 +404,8 @@ function displayObjectCircle(displayObject, circleObject, radius)
     radius = radius || circleObject.width / 2;
     var test = displayObject.worldTransform.applyInverse(new PIXI.Point(circleObject.x + radius, circleObject.y));
     var transformedRadiusSquared = Math.pow(test.x - circle.x, 2) + Math.pow(test.y - circle.y, 2);
-    var hw = displayObject._texture.orig.width / 2;
-    var hh = displayObject._texture.orig.height / 2;
+    var hw = displayObject.width / displayObject.scale.x / 2;
+    var hh = displayObject.height / displayObject.scale.y / 2;
     var bounds = {x: -hw, y: -hh, width: hw * 2, height: hh * 2};
     var closestX;
     if (circle.x < bounds.x)
