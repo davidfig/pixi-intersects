@@ -255,19 +255,6 @@ function lineContainerRotated(point1, point2, c)
            Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, hh, -hw, -hh);
 }
 
-// detects collision of a line and a PIXI.Container
-function lineContainerRotated(point1, point2, c)
-{
-    var p1 = c.worldTransform.applyInverse(point1);
-    var p2 = c.worldTransform.applyInverse(point2);
-    var hw = c._texture.orig.width / 2;
-    var hh = c._texture.orig.height / 2;
-    return Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, -hh, hw, -hh) ||
-           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, hw, -hh, hw, hh) ||
-           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, hw, hh, -hw, hh) ||
-           Intersects.lineLine(p1.x, p1.y, p2.x, p2.y, -hw, hh, -hw, -hh);
-}
-
 function getRotatedBoundingBox(c)
 {
     var halfWidth = (c.width / c.scale.x) / 2;
@@ -404,53 +391,51 @@ function circleCircle(c1, c2)
 }
 
 /**
- * DisplayObject and Circle collision
+ * DisplayObject collision with a DisplayObject that's a circle around its center point
  * based on http://www.migapro.com/circle-and-rotated-rectangle-collision-detection/
  * @param {PIXI.DisplayObject} displayObject
- * @param {object} circle
- * @param {number} circle.x center
- * @param {number} circle.y center
- * @param {number} circle.radius
+ * @param {PIXI.DisplayObject} circleObject
+ * @param {number=circleObject.width / 2} radius
  * @return {boolean} collision
  */
-function displayObjectCircle(displayObject, circle)
+function displayObjectCircle(displayObject, circleObject, radius)
 {
-    var sin = Math.sin(displayObject.rotation);
-    var cos = Math.cos(displayObject.rotation);
-    var unrotatedCircleX = cos * (circle.x - displayObject.x) - sin * (circle.y - displayObject.y) + displayObject.x;
-    var unrotatedCircleY = sin * (circle.x - displayObject.x) + cos * (circle.y - displayObject.y) + displayObject.y;
-    var halfWidth = displayObject.width / 2;
-    var halfHeight = displayObject.height / 2;
-    var bounds = {x: displayObject.x - halfWidth, y: displayObject.y - halfHeight, width: displayObject.width, height: displayObject.height};
+    var circle = displayObject.worldTransform.applyInverse(circleObject);
+    radius = radius || circleObject.width / 2;
+    var test = displayObject.worldTransform.applyInverse(new PIXI.Point(circleObject.x + radius, circleObject.y));
+    var transformedRadiusSquared = Math.pow(test.x - circle.x, 2) + Math.pow(test.y - circle.y, 2);
+    var hw = displayObject._texture.orig.width / 2;
+    var hh = displayObject._texture.orig.height / 2;
+    var bounds = {x: -hw, y: -hh, width: hw * 2, height: hh * 2};
     var closestX;
-    if (unrotatedCircleX < bounds.x)
+    if (circle.x < bounds.x)
     {
         closestX = bounds.x;
     }
-    else if (unrotatedCircleX  > bounds.x + bounds.width)
+    else if (circle.x  > bounds.x + bounds.width)
     {
         closestX = bounds.x + bounds.width;
     }
     else
     {
-        closestX = unrotatedCircleX;
+        closestX = circle.x;
     }
 
     var closestY;
-    if (unrotatedCircleY < bounds.y)
+    if (circle.y < bounds.y)
     {
         closestY = bounds.y;
     }
-    else if (unrotatedCircleY  > bounds.y + bounds.height)
+    else if (circle.y  > bounds.y + bounds.height)
     {
         closestY = bounds.y + bounds.height;
     }
     else
     {
-        closestY = unrotatedCircleY;
+        closestY = circle.y;
     }
-    var distanceSquared = Math.pow(unrotatedCircleX - closestX, 2) + Math.pow(unrotatedCircleY - closestY, 2);
-    return (distanceSquared < circle.radius * circle.radius);
+    var distanceSquared = Math.pow(circle.x - closestX, 2) + Math.pow(circle.y - closestY, 2);
+    return (distanceSquared < transformedRadiusSquared);
 }
 
 // exports
