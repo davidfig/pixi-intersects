@@ -3,18 +3,20 @@
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/ascetic.min.css">
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/highlight.min.js"></script>
 
-    <script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
+    <!--<script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
+    <script src="https://rawgit.com/davidfig/debug/master/debug.js"></script>
     <script src="https://rawgit.com/davidfig/update/master/update.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/animate.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/easing.js"></script>
-    <script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>
+    <script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>-->
 
     <!-- for local testing -->
-    <!--<script src="../renderer/renderer.js"></script>
+    <script src="../renderer/renderer.js"></script>
+    <script src="../debug/debug.js"></script>
     <script src="../update/update.js"></script>
     <script src="../animate/animate.js"></script>
     <script src="../animate/easing.js"></script>
-    <script src="../intersects/intersects.js"></script>-->
+    <script src="../intersects/intersects.js"></script>
 
     <style>
         body {
@@ -49,6 +51,8 @@
     <pre><code class="javascript" id="code"></code></pre>
     <script id="sample">
 
+        Debug.init();
+
         // set up renderer
         var renderer;
         pixi();
@@ -63,6 +67,8 @@
         lineContainerRotated(800, 100);
         displayObjects(950, 400);
         circleCircle(300, 300);
+        displayObjectAABB(250, 100);
+        circleContainer(100, 610);
 
         // point and container
         function pointInContainer(x, y)
@@ -164,6 +170,47 @@
             Animate.to(c2, {x: x - 100, y: y - 25}, 750, {repeat: true, reverse: true}, Easing.easeInOutSine);
         }
 
+        function displayObjectAABB(x, y)
+        {
+            var AABB = {x: x + 50, y: y + 50, width: 50, height: 50};
+            var aabb = renderer.addChild(PIXI.Sprite.fromImage('box.png'));
+            aabb.tint = 0x00ff00;
+            aabb.width = aabb.height = AABB.width;
+            aabb.position.set(AABB.x, AABB.y);
+            var sprite = renderer.addChild(PIXI.Sprite.fromImage('box.png'));
+            sprite.position.set(x + 125, y + 50);
+            sprite.anchor.set(0.5);
+            sprite.width = sprite.height = 75;
+            sprite.tint = 0x00ff00;
+            aabb.alpha = sprite.alpha = 0.5;
+            Animate.to(sprite, {x: x, y: y, rotation: Math.PI / 8}, 600, {repeat: true, reverse: true, onEach:
+                function()
+                {
+                    var intersect = Intersects.displayObjectAABB(sprite, AABB, renderer.stage);
+                    sprite.tint = aabb.tint = intersect ? 0xff0000 : 0x00ff00;
+                }}, Easing.easeInOutSine);
+        }
+
+        function circleContainer(x, y)
+        {
+            var circ = {x: x - 30, y: y - 30, radius: 75};
+            var c = circle(circ.radius * 2, 0x00ff00, circ.x, circ.y);
+            var rectangle = square(50, 0x00ff00, x + 150, y + 30);
+
+            Animate.to(rectangle, {rotation: Math.PI * 2}, 13000, {repeat: true});
+            Animate.to(rectangle, {x: x + 50}, 2000, {repeat: true, reverse: true}, Easing.easeInOutSine);
+
+            Animate.to([c, circ], {x: x + 100, y: y - 10}, 11500, {repeat: true, reverse: true, onEach:
+                function()
+                {
+                    var intersect = Intersects.displayObjectCircle(rectangle, circ);
+                    c.tint = rectangle.tint = intersect ? 0xff0000 : 0x00ff00;
+                }}, Easing.easeInOutSine);
+
+            var t = text('Circle-Container', x, y + 120);
+            t.x += t.width / 2;
+        }
+
         // initialize renderer and update loop for animation (see github.com/davidfig/renderer/, github.com/davidfig/update, and github.com/davidfig/animate)
         function pixi()
         {
@@ -204,6 +251,7 @@
         function circle(size, color, x, y)
         {
             var circle = PIXI.Sprite.fromImage('circle.png');
+            circle.anchor.set(0.5);
             circle.width = circle.height = size;
             renderer.addChild(circle);
             circle.tint = color;
@@ -232,6 +280,7 @@
             c.position.set(x, y);
             back.width = words.width * 1.25;
             back.height = words.height * 1.25;
+            return c;
         }
 
     </script>
