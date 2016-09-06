@@ -403,6 +403,56 @@ function circleCircle(c1, c2)
     return Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2) <= Math.pow(r2 + r1, 2);
 }
 
+/**
+ * DisplayObject and Circle collision
+ * based on http://www.migapro.com/circle-and-rotated-rectangle-collision-detection/
+ * @param {PIXI.DisplayObject} displayObject
+ * @param {object} circle
+ * @param {number} circle.x center
+ * @param {number} circle.y center
+ * @param {number} circle.radius
+ * @return {boolean} collision
+ */
+function displayObjectCircle(displayObject, circle)
+{
+    var sin = Math.sin(displayObject.rotation);
+    var cos = Math.cos(displayObject.rotation);
+    var unrotatedCircleX = cos * (circle.x - displayObject.x) - sin * (circle.y - displayObject.y) + displayObject.x;
+    var unrotatedCircleY = sin * (circle.x - displayObject.x) + cos * (circle.y - displayObject.y) + displayObject.y;
+    var halfWidth = displayObject.width / 2;
+    var halfHeight = displayObject.height / 2;
+    var bounds = {x: displayObject.x - halfWidth, y: displayObject.y - halfHeight, width: displayObject.width, height: displayObject.height};
+    var closestX;
+    if (unrotatedCircleX < bounds.x)
+    {
+        closestX = bounds.x;
+    }
+    else if (unrotatedCircleX  > bounds.x + bounds.width)
+    {
+        closestX = bounds.x + bounds.width;
+    }
+    else
+    {
+        closestX = unrotatedCircleX;
+    }
+
+    var closestY;
+    if (unrotatedCircleY < bounds.y)
+    {
+        closestY = bounds.y;
+    }
+    else if (unrotatedCircleY  > bounds.y + bounds.height)
+    {
+        closestY = bounds.y + bounds.height;
+    }
+    else
+    {
+        closestY = unrotatedCircleY;
+    }
+    var distanceSquared = Math.pow(unrotatedCircleX - closestX, 2) + Math.pow(unrotatedCircleY - closestY, 2);
+    return (distanceSquared < circle.radius * circle.radius);
+}
+
 // exports
 var Intersects = {
     pointContainer: pointContainer,
@@ -413,6 +463,7 @@ var Intersects = {
     lineAABB: lineAABB,
     displayObjects: displayObjects,
     displayObjectAABB: displayObjectAABB,
+    displayObjectCircle: displayObjectCircle,
 
     rectangleRectangleCorners: rectangleRectangleCorners,
     lineContainer: lineContainer,
