@@ -140,9 +140,9 @@ class Shape
         return Shape.lineLine(p1, p2, vertices[length - 1], vertices[0]);
     }
 
-    static collides(shape)
+    collides(shape)
     {
-        return this['collides' + (typeof shape)](shape);
+        return this['collides' + shape.type](shape);
     }
 
     /**

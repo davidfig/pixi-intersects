@@ -17,6 +17,7 @@ class Polygon extends Shape
     constructor(article, options)
     {
         super(article);
+        this.type = 'Polygon';
         options = options || {};
         this.set(options);
     }

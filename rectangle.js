@@ -18,6 +18,7 @@ class Rectangle extends Shape
     constructor(article, options)
     {
         super(article);
+        this.type = 'Rectangle';
         options = options || {};
         this.last = {};
         this._vertices = [];
