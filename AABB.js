@@ -19,7 +19,8 @@ class AABB extends Shape
     {
         super(article);
         options = options || {};
-        this.vertices = [{x: 0, y: 0}, {x: 0, y: 0}, {x: 0, y: 0}, {x: 0, y: 0}];
+        this.vertices = [];
+        this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
         this.set(options);
     }
 
@@ -39,11 +40,14 @@ class AABB extends Shape
         if (typeof options.square !== 'undefined')
         {
             width = height = options.square / (options.center ? 2 : 1);
+            this.hw = this.hh = options.square / 2;
         }
         else
         {
             width = options.width / (options.center ? 2 : 1);
             height = options.height / (options.center ? 2 : 1);
+            this.hw = options.width / 2;
+            this.hh = options.height / 2;
         }
 
         let AABB = this.AABB;
@@ -73,18 +77,16 @@ class AABB extends Shape
 
     updateVertices()
     {
-        function vertex(x, y, v)
-        {
-            v.x = x;
-            v.y = y;
-        }
-
         const AABB = this.AABB;
         const vertices = this.vertices;
-        vertex(AABB[0], AABB[1], vertices[0]);
-        vertex(AABB[2], AABB[1], vertices[1]);
-        vertex(AABB[2], AABB[3], vertices[2]);
-        vertex(AABB[0], AABB[3], vertices[3]);
+        vertices[0] = AABB[0];
+        vertices[1] = AABB[1];
+        vertices[2] = AABB[2];
+        vertices[3] = AABB[1];
+        vertices[4] = AABB[2];
+        vertices[5] = AABB[3];
+        vertices[6] = AABB[0];
+        vertices[7] = AABB[3];
     }
 
     collidesRectangle(rectangle)
@@ -106,6 +108,34 @@ class AABB extends Shape
     {
         var AABB = this.AABB;
         return point.x >= AABB[0] && point.x <= AABB[2] && point.y >= AABB[1] && point.y <= AABB[3];
+    }
+
+    /**
+     * from http://stackoverflow.com/a/402010/1955997
+     */
+    collidesCircle(circle)
+    {
+        const AABB = this.AABB;
+        const hw = this.hw;
+        const hh = this.hh;
+        const center = circle.center;
+        const radius = circle.radius;
+        const distX = Math.abs(center.x - AABB[0]);
+        const distY = Math.abs(center.y - AABB[1]);
+
+        if (distX > hw + radius || distY > hh + radius)
+        {
+            return false;
+        }
+
+        if (distX <= hw || distY <= hh)
+        {
+            return true;
+        }
+
+        const x = distX - hw;
+        const y = distY - hh;
+        return x * x + y * y <= circle.radiusSquared;
     }
 }
 

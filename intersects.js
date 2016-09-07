@@ -20,7 +20,8 @@ class AABB extends Shape
     {
         super(article);
         options = options || {};
-        this.vertices = [{x: 0, y: 0}, {x: 0, y: 0}, {x: 0, y: 0}, {x: 0, y: 0}];
+        this.vertices = [];
+        this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
         this.set(options);
     }
 
@@ -40,11 +41,14 @@ class AABB extends Shape
         if (typeof options.square !== 'undefined')
         {
             width = height = options.square / (options.center ? 2 : 1);
+            this.hw = this.hh = options.square / 2;
         }
         else
         {
             width = options.width / (options.center ? 2 : 1);
             height = options.height / (options.center ? 2 : 1);
+            this.hw = options.width / 2;
+            this.hh = options.height / 2;
         }
 
         let AABB = this.AABB;
@@ -74,18 +78,16 @@ class AABB extends Shape
 
     updateVertices()
     {
-        function vertex(x, y, v)
-        {
-            v.x = x;
-            v.y = y;
-        }
-
         const AABB = this.AABB;
         const vertices = this.vertices;
-        vertex(AABB[0], AABB[1], vertices[0]);
-        vertex(AABB[2], AABB[1], vertices[1]);
-        vertex(AABB[2], AABB[3], vertices[2]);
-        vertex(AABB[0], AABB[3], vertices[3]);
+        vertices[0] = AABB[0];
+        vertices[1] = AABB[1];
+        vertices[2] = AABB[2];
+        vertices[3] = AABB[1];
+        vertices[4] = AABB[2];
+        vertices[5] = AABB[3];
+        vertices[6] = AABB[0];
+        vertices[7] = AABB[3];
     }
 
     collidesRectangle(rectangle)
@@ -107,6 +109,34 @@ class AABB extends Shape
     {
         var AABB = this.AABB;
         return point.x >= AABB[0] && point.x <= AABB[2] && point.y >= AABB[1] && point.y <= AABB[3];
+    }
+
+    /**
+     * from http://stackoverflow.com/a/402010/1955997
+     */
+    collidesCircle(circle)
+    {
+        const AABB = this.AABB;
+        const hw = this.hw;
+        const hh = this.hh;
+        const center = circle.center;
+        const radius = circle.radius;
+        const distX = Math.abs(center.x - AABB[0]);
+        const distY = Math.abs(center.y - AABB[1]);
+
+        if (distX > hw + radius || distY > hh + radius)
+        {
+            return false;
+        }
+
+        if (distX <= hw || distY <= hh)
+        {
+            return true;
+        }
+
+        const x = distX - hw;
+        const y = distY - hh;
+        return x * x + y * y <= circle.radiusSquared;
     }
 }
 
@@ -131,6 +161,7 @@ class Circle extends Shape
     constructor(article, options)
     {
         super(article);
+        this._AABB = [];
         options = options || {};
         this.set(options);
     }
@@ -140,16 +171,19 @@ class Circle extends Shape
      * @param {boolean=true} options.static - this object does not need to be updated
      * @param {object=this.article} options.positionObject - use this to update position (and rotation unless rotationObject is defined)
      * @param {object=this.article} options.rotationObject - use this to update rotation
-     * @param {number=} options.radius
+     * @param {number=} options.radius - otherwise article.width / 2 is used as radius
      */
     set(options)
     {
         if (typeof options.radius !== 'undefined')
         {
             this.radius = options.radius;
-            this.diameter = this.radius * 2;
-            this.radiusSquared = this.radius * this.radius;
         }
+        else
+        {
+            this.radius = this.article.width / 2;
+        }
+        this.radiusSquared = this.radius * this.radius;
         if (typeof options.static !== 'undefined')
         {
             this.static = options.static;
@@ -157,28 +191,37 @@ class Circle extends Shape
 
         this.center = options.positionObject ? options.positionObject : this.article;
         this.rotation = options.rotationObject ? options.rotationObject : (options.positionObject ? options.positionObject : this.article);
-        this.update();
+        this.update(true);
     }
 
-    /** update AABB */
-    update()
+    get AABB()
     {
-        if (!this.static)
+        this.update();
+        return this._AABB;
+    }
+
+    update(dirty)
+    {
+        if (dirty || !this.static)
         {
-            const AABB = this.AABB;
+            const AABB = this._AABB;
             const radius = this.radius;
             const center = this.center;
-            AABB.x = center.x - radius;
-            AABB.y = center.y - radius;
-            AABB.width = AABB.height = this.diameter;
+            AABB[0] = center.x - radius;
+            AABB[1] = center.y - radius;
+            AABB[2] = center.x + radius;
+            AABB[3] = center.y + radius;
         }
     }
 
     collidesCircle(circle)
     {
-        const x = circle.x - this.center.x;
-        const y = circle.y - this.center.y;
-        return x * x + y * y <= circle.radius * this.radius;
+        const thisCenter = this.center;
+        const center = circle.center;
+        const x = center.x - thisCenter.x;
+        const y = center.y - thisCenter.y;
+        const radii = circle.radius + this.radius;
+        return x * x + y * y <= radii * radii;
     }
 
     collidesPoint(point)
@@ -188,15 +231,80 @@ class Circle extends Shape
         return x * x + y * y <= this.radiusSquared;
     }
 
-    // collidesRectangle(rectangle)
-    // {
+    /**
+     * from http://stackoverflow.com/a/10392860/1955997
+     */
+    collidesLine(p1, p2)
+    {
+        function dot(v1, v2)
+        {
+            return (v1[0] * v2[0]) + (v1[1] * v2[1]);
+        }
 
-    // }
+        const center = this.center;
 
-    // collidesAABB(AABB)
-    // {
+        // public static bool IntersectLineCircle(Vector2 location, float radius, Vector2 lineFrom, Vector2 lineTo)
 
-    // }
+        const ac = [center.x - p1.x, center.y - p1.y]; // location - lineFrom;
+        const ab = [p2.x - p1.x, p2.y - p1.y]; // lineTo - lineFrom;
+        const ab2 = dot(ab, ab);
+        const acab = dot(ac, ab);
+        let t = acab / ab2;
+        t = (t < 0) ? 0 : t;
+        t = (t > 1) ? 1 : t;
+        let h = [(ab[0] * t + p1.x) - center.x, (ab[1] * t + p1.y) - center.y]; // ((ab * t) + lineFrom) - location;
+        const h2 = dot(h, h);
+        return h2 <= this.radiusSquared;
+
+        // // Project point on a line
+        // var ap = [center.x - p1.x, center.y - p1.y];
+        // var ab = [p2.x - p1.x, p2.y - p1.y];
+        // var coef = dotProduct2(ap, ab) / dotProduct2(ab, ab);
+        // var check = [p1.x + (coef * ab[0]), p2.y + (coef * ab[1])];
+
+        // // checks if the projected point is on the specified segment
+        // return (p1.x < check[0] && check[0] < p2.x) || (p1.x > check[0] && check[0] > p2.x) ||
+        //     (p1.y < check[1] && check[1] < p2.y) || (p1.y > check[1] && check[1] > p2.y);
+    }
+
+    /**
+     * from http://stackoverflow.com/a/402019/1955997
+     */
+    collidesRectangle(rectangle)
+    {
+        const center = this.center;
+        if (rectangle.collidesPoint(center))
+        {
+            return true;
+        }
+    }
+
+    /**
+     * from http://stackoverflow.com/a/402010/1955997
+     */
+    collidesAABB(AABB)
+    {
+        const hw = (AABB[2] - AABB[0]) / 2;
+        const hh = (AABB[3] - AABB[1]) / 2;
+        const center = this.center;
+        const radius = this.radius;
+        const distX = Math.abs(center.x - AABB[0]);
+        const distY = Math.abs(center.y - AABB[1]);
+
+        if (distX > hw + radius || distY > hh + radius)
+        {
+            return false;
+        }
+
+        if (distX <= hw || distY <= hh)
+        {
+            return true;
+        }
+
+        const x = distX - hw;
+        const y = distY - hh;
+        return x * x + y * y <= this.radiusSquared;
+    }
 }
 
 module.exports = Circle;
@@ -208,6 +316,17 @@ module.exports = Circle;
  * Author David Figatner
  * Copyright (c) 2016 YOPEY YOPEY LLC
  */
+
+/**
+ * this is only necessary for the standalone intersects.js build (i.e., if you don't use modules)
+ *
+ * Usage:
+ *
+ * <script src="intersects.js"></script>
+ *
+ * <script>
+ *      var shape = new Intersects.Rectangle(container);
+ * */
 
 /* global window */
 const Intersects = window.Intersects || {};
@@ -295,7 +414,8 @@ class Rectangle extends Shape
         super(article);
         options = options || {};
         this.last = {};
-        this._vertices = [{x: 0, y: 0}, {x: 0, y: 0}, {x: 0, y: 0}, {x: 0, y: 0}];
+        this._vertices = [];
+        this._AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
         this.set(options);
     }
 
@@ -309,6 +429,7 @@ class Rectangle extends Shape
      */
     set(options)
     {
+        this.static = options.static;
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
         this.width = options.width || this.article.width;
@@ -323,7 +444,7 @@ class Rectangle extends Shape
      */
     update(dirty)
     {
-        if (dirty || (!this.static && this.checkLast()))
+        if (dirty || !this.static)
         {
             // use PIXI's transform for cos and sin (this can be replaced with a simple Math.cos/sin call--don't forget to cache the values)
             const transform = this.rotation.transform;
@@ -339,15 +460,15 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
             const ex = height * s + width * c;  // x extent of AABB
             const ey = height * c + width * s;  // y extent of AABB
 
-            const AABB = this.AABB;
+            const AABB = this._AABB;
             const center = this.center;
-            AABB.x1 = center.x - ex;
-            AABB.y1 = center.y - ey;
-            AABB.x2 = center.x + ex;
-            AABB.y2 = center.y + ey;
+            AABB[0] = center.x - ex;
+            AABB[1] = center.y - ey;
+            AABB[2] = center.x + ex;
+            AABB[3] = center.y + ey;
 
-            this.verticesDirty = true;
             this.updateLast();
+            this.verticesDirty = true;
         }
     }
 
@@ -369,31 +490,49 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
 
     updateVertices()
     {
-        function vertex(x, y, v)
+        function xCalc(x, y)
         {
-            v.x = center.x + x * cos - y * sin;
-            v.y = center.y + x * sin + y * cos;
+            return center.x + x * cos - y * sin;
         }
+
+        function yCalc(x, y)
+        {
+            return center.y + x * sin + y * cos;
+        }
+
         const vertices = this._vertices;
         const center = this.center;
-debugOne(Math.random())
         const transform = this.rotation.transform;
         const sin = transform._sr;
         const cos = transform._cr;
         const hw = this.hw;
         const hh = this.hh;
 
-        vertex(-hw, -hh, vertices[0]);
-        vertex(+hw, -hh, vertices[1]);
-        vertex(+hw, +hh, vertices[2]);
-        vertex(-hw, +hh, vertices[3]);
+        vertices[0] = xCalc(-hw, -hh);
+        vertices[1] = yCalc(-hw, -hh);
+        vertices[2] = xCalc(+hw, -hh);
+        vertices[3] = yCalc(+hw, -hh);
+        vertices[4] = xCalc(+hw, +hh);
+        vertices[5] = yCalc(+hw, +hh);
+        vertices[6] = xCalc(-hw, +hh);
+        vertices[7] = yCalc(-hw, +hh);
 
+        this.update(true);
         this.verticesDirty = false;
+    }
+
+    get AABB()
+    {
+        if (!this.static && this.checkLast())
+        {
+            this.update();
+        }
+        return this._AABB;
     }
 
     get vertices()
     {
-        if (this.verticesDirty || this.checkLast())
+        if (!this.static && (this.verticesDirty || this.checkLast()))
         {
             this.updateVertices();
         }
@@ -407,7 +546,7 @@ debugOne(Math.random())
 
     collidesAABB(AABB)
     {
-        return this.collidesPolygon(AABB);
+        return this.collidesPolygon(AABB, true);
     }
 }
 
@@ -430,7 +569,6 @@ class Shape
     constructor(article)
     {
         this.article = article;
-        this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
         this.static = true;
     }
 
@@ -440,7 +578,7 @@ class Shape
      * collides with this shape's AABB box
      * @param {object} AABB
      */
-    AABBcollideAABB(AABB)
+    AABBCollidesAABB(AABB)
     {
         var AABB2 = this.AABB;
         return !(AABB[2] < AABB2[0] || AABB2[2] < AABB[0] || AABB[3] < AABB2[1] || AABB2[3] < AABB[1]);
@@ -455,14 +593,13 @@ class Shape
         const vertices = this.vertices;
         const length = vertices.length;
         let c = false;
-        for (let i = 0, j = length - 1; i < length; j = i++)
+        for (let i = 0, j = length - 2; i < length; i += 2)
         {
-            const vI = vertices[i];
-            const vJ = vertices[j];
-            if (((vI.y > point.y) !== (vJ.y > point.y)) && (point.x < (vJ.x - vI.x) * (point.y - vI.y) / (vJ.y - vI.y) + vI.x))
+            if (((vertices[i + 1] > point.y) !== (vertices[j + 1] > point.y)) && (point.x < (vertices[j] - vertices[i]) * (point.y - vertices[i + 1]) / (vertices[j + 1] - vertices[i + 1]) + vertices[i]))
             {
                 c = !c;
             }
+            j = i;
         }
         return c;
     }
@@ -485,25 +622,23 @@ class Shape
     /**
      * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
      */
-    collidesPolygon(polygon)
+    collidesPolygon(polygon, isAABB)
     {
         const a = this.vertices;
-        const b = polygon.vertices;
+        const b = isAABB ? polygon : polygon.vertices;
         const polygons = [a, b];
         let minA, maxA, projected, minB, maxB;
         for (let i = 0; i < polygons.length; i++)
         {
             const polygon = polygons[i];
-            for (let i1 = 0; i1 < polygon.length; i1++)
+            for (let i1 = 0; i1 < polygon.length; i1 += 2)
             {
-                var i2 = (i1 + 1) % polygon.length;
-                var p1 = polygon[i1];
-                var p2 = polygon[i2];
-                var normal = { x: p2.y - p1.y, y: p1.x - p2.x };
+                var i2 = (i1 + 2) % polygon.length;
+                var normal = { x: polygon[i2 + 1] - polygon[i1 + 1], y: polygon[i1] - polygon[i2] };
                 minA = maxA = null;
-                for (let j = 0; j < a.length; j++)
+                for (let j = 0; j < a.length; j += 2)
                 {
-                    projected = normal.x * a[j].x + normal.y * a[j].y;
+                    projected = normal.x * a[j] + normal.y * a[j + 1];
                     if (minA === null || projected < minA)
                     {
                         minA = projected;
@@ -514,9 +649,9 @@ class Shape
                     }
                 }
                 minB = maxB = null;
-                for (let j = 0; j < b.length; j++)
+                for (let j = 0; j < b.length; j += 2)
                 {
-                    projected = normal.x * b[j].x + normal.y * b[j].y;
+                    projected = normal.x * b[j] + normal.y * b[j + 1];
                     if (minB === null || projected < minB)
                     {
                         minB = projected;

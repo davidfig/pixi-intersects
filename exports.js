@@ -6,6 +6,17 @@
  * Copyright (c) 2016 YOPEY YOPEY LLC
  */
 
+/**
+ * this is only necessary for the standalone intersects.js build (i.e., if you don't use modules)
+ *
+ * Usage:
+ *
+ * <script src="intersects.js"></script>
+ *
+ * <script>
+ *      var shape = new Intersects.Rectangle(container);
+ * */
+
 /* global window */
 const Intersects = window.Intersects || {};
 

@@ -15,7 +15,6 @@ class Shape
     constructor(article)
     {
         this.article = article;
-        this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
         this.static = true;
     }
 
@@ -25,7 +24,7 @@ class Shape
      * collides with this shape's AABB box
      * @param {object} AABB
      */
-    AABBcollideAABB(AABB)
+    AABBCollidesAABB(AABB)
     {
         var AABB2 = this.AABB;
         return !(AABB[2] < AABB2[0] || AABB2[2] < AABB[0] || AABB[3] < AABB2[1] || AABB2[3] < AABB[1]);
@@ -40,14 +39,13 @@ class Shape
         const vertices = this.vertices;
         const length = vertices.length;
         let c = false;
-        for (let i = 0, j = length - 1; i < length; j = i++)
+        for (let i = 0, j = length - 2; i < length; i += 2)
         {
-            const vI = vertices[i];
-            const vJ = vertices[j];
-            if (((vI.y > point.y) !== (vJ.y > point.y)) && (point.x < (vJ.x - vI.x) * (point.y - vI.y) / (vJ.y - vI.y) + vI.x))
+            if (((vertices[i + 1] > point.y) !== (vertices[j + 1] > point.y)) && (point.x < (vertices[j] - vertices[i]) * (point.y - vertices[i + 1]) / (vertices[j + 1] - vertices[i + 1]) + vertices[i]))
             {
                 c = !c;
             }
+            j = i;
         }
         return c;
     }
@@ -70,25 +68,23 @@ class Shape
     /**
      * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
      */
-    collidesPolygon(polygon)
+    collidesPolygon(polygon, isAABB)
     {
         const a = this.vertices;
-        const b = polygon.vertices;
+        const b = isAABB ? polygon : polygon.vertices;
         const polygons = [a, b];
         let minA, maxA, projected, minB, maxB;
         for (let i = 0; i < polygons.length; i++)
         {
             const polygon = polygons[i];
-            for (let i1 = 0; i1 < polygon.length; i1++)
+            for (let i1 = 0; i1 < polygon.length; i1 += 2)
             {
-                var i2 = (i1 + 1) % polygon.length;
-                var p1 = polygon[i1];
-                var p2 = polygon[i2];
-                var normal = { x: p2.y - p1.y, y: p1.x - p2.x };
+                var i2 = (i1 + 2) % polygon.length;
+                var normal = { x: polygon[i2 + 1] - polygon[i1 + 1], y: polygon[i1] - polygon[i2] };
                 minA = maxA = null;
-                for (let j = 0; j < a.length; j++)
+                for (let j = 0; j < a.length; j += 2)
                 {
-                    projected = normal.x * a[j].x + normal.y * a[j].y;
+                    projected = normal.x * a[j] + normal.y * a[j + 1];
                     if (minA === null || projected < minA)
                     {
                         minA = projected;
@@ -99,9 +95,9 @@ class Shape
                     }
                 }
                 minB = maxB = null;
-                for (let j = 0; j < b.length; j++)
+                for (let j = 0; j < b.length; j += 2)
                 {
-                    projected = normal.x * b[j].x + normal.y * b[j].y;
+                    projected = normal.x * b[j] + normal.y * b[j + 1];
                     if (minB === null || projected < minB)
                     {
                         minB = projected;

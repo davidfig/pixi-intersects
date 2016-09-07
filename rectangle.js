@@ -20,7 +20,8 @@ class Rectangle extends Shape
         super(article);
         options = options || {};
         this.last = {};
-        this._vertices = [{x: 0, y: 0}, {x: 0, y: 0}, {x: 0, y: 0}, {x: 0, y: 0}];
+        this._vertices = [];
+        this._AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
         this.set(options);
     }
 
@@ -34,6 +35,7 @@ class Rectangle extends Shape
      */
     set(options)
     {
+        this.static = options.static;
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
         this.width = options.width || this.article.width;
@@ -48,7 +50,7 @@ class Rectangle extends Shape
      */
     update(dirty)
     {
-        if (dirty || (!this.static && this.checkLast()))
+        if (dirty || !this.static)
         {
             // use PIXI's transform for cos and sin (this can be replaced with a simple Math.cos/sin call--don't forget to cache the values)
             const transform = this.rotation.transform;
@@ -64,15 +66,15 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
             const ex = height * s + width * c;  // x extent of AABB
             const ey = height * c + width * s;  // y extent of AABB
 
-            const AABB = this.AABB;
+            const AABB = this._AABB;
             const center = this.center;
-            AABB.x1 = center.x - ex;
-            AABB.y1 = center.y - ey;
-            AABB.x2 = center.x + ex;
-            AABB.y2 = center.y + ey;
+            AABB[0] = center.x - ex;
+            AABB[1] = center.y - ey;
+            AABB[2] = center.x + ex;
+            AABB[3] = center.y + ey;
 
-            this.verticesDirty = true;
             this.updateLast();
+            this.verticesDirty = true;
         }
     }
 
@@ -94,31 +96,49 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
 
     updateVertices()
     {
-        function vertex(x, y, v)
+        function xCalc(x, y)
         {
-            v.x = center.x + x * cos - y * sin;
-            v.y = center.y + x * sin + y * cos;
+            return center.x + x * cos - y * sin;
         }
+
+        function yCalc(x, y)
+        {
+            return center.y + x * sin + y * cos;
+        }
+
         const vertices = this._vertices;
         const center = this.center;
-debugOne(Math.random())
         const transform = this.rotation.transform;
         const sin = transform._sr;
         const cos = transform._cr;
         const hw = this.hw;
         const hh = this.hh;
 
-        vertex(-hw, -hh, vertices[0]);
-        vertex(+hw, -hh, vertices[1]);
-        vertex(+hw, +hh, vertices[2]);
-        vertex(-hw, +hh, vertices[3]);
+        vertices[0] = xCalc(-hw, -hh);
+        vertices[1] = yCalc(-hw, -hh);
+        vertices[2] = xCalc(+hw, -hh);
+        vertices[3] = yCalc(+hw, -hh);
+        vertices[4] = xCalc(+hw, +hh);
+        vertices[5] = yCalc(+hw, +hh);
+        vertices[6] = xCalc(-hw, +hh);
+        vertices[7] = yCalc(-hw, +hh);
 
+        this.update(true);
         this.verticesDirty = false;
+    }
+
+    get AABB()
+    {
+        if (!this.static && this.checkLast())
+        {
+            this.update();
+        }
+        return this._AABB;
     }
 
     get vertices()
     {
-        if (this.verticesDirty || this.checkLast())
+        if (!this.static && (this.verticesDirty || this.checkLast()))
         {
             this.updateVertices();
         }
@@ -132,7 +152,7 @@ debugOne(Math.random())
 
     collidesAABB(AABB)
     {
-        return this.collidesPolygon(AABB);
+        return this.collidesPolygon(AABB, true);
     }
 }
 
