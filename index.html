@@ -1,22 +1,22 @@
 <head>
-    <script src="https://rawgit.com/pixijs/pixi.js/dev/bin/pixi.js"></script>
+    <script src="https://rawgit.com/pixijs/pixi.js/master/bin/pixi.js"></script>
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/ascetic.min.css">
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/highlight.min.js"></script>
 
-    <script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
+    <!--<script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
     <script src="https://rawgit.com/davidfig/debug/master/debug.js"></script>
     <script src="https://rawgit.com/davidfig/update/master/update.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/animate.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/easing.js"></script>
-    <script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>
+    <script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>-->
 
     <!-- for local testing -->
-    <!--<script src="../renderer/renderer.js"></script>
+    <script src="../renderer/renderer.js"></script>
     <script src="../debug/debug.js"></script>
     <script src="../update/update.js"></script>
     <script src="../animate/animate.js"></script>
     <script src="../animate/easing.js"></script>
-    <script src="../intersects/intersects.js"></script>-->
+    <script src="../intersects/intersects.js"></script>
 
     <style>
         body {
@@ -52,7 +52,7 @@
     <script id="sample">
 
         Debug.init();
-
+        debug('===KEY===<br>Blue: AABB collision<br>Red: collision<br>Green: none');
         // set up renderer
         var renderer;
         pixi();
@@ -61,150 +61,154 @@
         Animate.init();
 
         // create examples
-        pointInContainer(100, 100);
-        pointInBox(600, 120);
+        pointInAABB(100, 100);
+        pointInRectangle(600, 100);
         lineLine(100, 350);
-        lineContainerRotated(800, 100);
-        displayObjects(950, 400);
+        lineRectangle(800, 100);
+        rectangleRectangle(950, 350);
         circleCircle(300, 300);
-        displayObjectAABB(250, 100);
-        circleContainer(100, 610);
+        lineCircle(300, 500);
+        circleRectangle(650, 590);
 
-        // point and container
-        function pointInContainer(x, y)
+        // point and AABB
+        function pointInAABB(x, y)
         {
-            var s = square(100, 0x00ff00, x, y);
-            var c = circle(5, 0, x, y);
-            text('point-container', x, y + 68);
-            Animate.to(c, {x: x * 2, y: y * 1.25}, 2000, {renderer: renderer, reverse: true, repeat: true, onEach: function()
+            var s = square(80, 0x00ff00, x, y);
+            s.shape = new Intersects.AABB(null, {x: x, y: y, center: true, square: 80});
+            var c = circle(5, 0, x + 75, y);
+            text('Point-AABB', x, y + 68);
+            Animate.to(c, {x: x - 100, y: y - 20}, 4000, {reverse: true, repeat: true, onEach: function()
                 {
-                    s.tint = Intersects.pointContainer(c.position, s) ? 0xff0000 : 0x00ff00;
+                    s.tint = s.shape.collidesPoint(c) ? 0xff0000 : 0x00ff00;
                 }}, Easing.easeInOutSine);
         }
 
-        // point and box
-        function pointInBox(x, y)
+        // point and rectangle
+        function pointInRectangle(x, y)
         {
-            var buffer = square(100, 0, x, y);
-            buffer.alpha = 0.25;
-            var s = square(80, 0x00ff00, x, y);
-            var rect = {x: s.x, y: y, width: s.width, height: s.height};
-            var c = circle(5, 0, x + 75, y);
-            text('point-box (buffer)', x, y + 68);
-            Animate.to(c, {x: x - 100, y: y - 20}, 4000, {renderer: renderer, reverse: true, repeat: true, onEach: function()
+            var s = square(60, 0x00ff00, x, y);
+            s.rotation = 0.4;
+            s.shape = new Intersects.Rectangle(s);
+            var c = circle(5, 0, x, y);
+            text('Point-Rectangle', x, y + 68);
+            Animate.to(c, {x: x + 100, y: y + 25}, 2000, {reverse: true, repeat: true, onEach: function()
                 {
-                    s.tint = Intersects.pointBox(c.position, rect, 10) ? 0xff0000 : 0x00ff00;
+                    s.tint = s.shape.AABBCollidesAABB([c.x, c.y, c.x, c.y]) ? 0x0000ff : 0x00ff00;
+                    s.tint = s.shape.collidesPoint(c) ? 0xff0000 : s.tint;
                 }}, Easing.easeInOutSine);
         }
 
         // line and line
         function lineLine(x, y)
         {
-            var g = renderer.addChild(new PIXI.Graphics());
-            g.alpha = 0.5;
+            var g = renderer.add(new PIXI.Graphics());
             text('line-line', x, y + 118);
             var l1 = {x: x, y: y};
             var l2 = {x: x, y: y + 100};
             var p1 = {x: x + 100, y: y};
             var p2 = {x: x + 50, y: y + 100};
             var move = {x: 0};
-            Animate.to(p1, {x: x - 75}, 2750, {renderer: renderer, reverse: true, repeat: true, onEach: function()
+            Animate.to(p1, {x: x - 75}, 2750, {reverse: true, repeat: true, onEach: function()
                 {
                     g.clear();
                     line(g, l1, l2, 0);
-                    var intersect = Intersects.lineLine(l1, l2, p1, p2);
+                    var intersect = Intersects.Shape.lineLine(l1, l2, p1, p2);
                     line(g, p1, p2, intersect ? 0xff0000 : 0x00ff00);
                 }}, Easing.easeInOutSine);
         }
 
-        // line and non-axis aligned rectangle
-        function lineContainerRotated(x, y)
+        // line and Rectangle
+        // note: it's not worth doing an AABB check because it cost the same as a Rectangle check
+        function lineRectangle(x, y)
         {
             var g = renderer.addChild(new PIXI.Graphics());
             g.alpha = 0.5;
-            text('line-container (non-axis aligned)', x, y + 118);
+            text('line-Rectangle', x, y + 118);
             var p1 = new PIXI.Point(x, y);
             var p2 = new PIXI.Point(x, y + 100);
             line(g, p1, p2, 0);
             var s = square(50, 0x00ff00, x + 100, y + 50);
+            s.shape = new Intersects.Rectangle(s);
             s.alpha = 0.5;
             Animate.to(s, {x: x - 100, y: y - 75, rotation: 2 * Math.PI}, 3000, {onEach: function()
                 {
-                    var intersect = Intersects.lineContainerRotated(p1, p2, s);
+                    var intersect = s.shape.collidesLine(p1, p2);
                     s.tint = intersect ? 0xff0000 : 0x00ff00;
                 }, reverse: true, repeat: true}, Easing.easeInOutSine);
 
         }
 
-        // two non-axis aligned rectangles
-        function displayObjects(x, y)
+        // two Rectangles
+        function rectangleRectangle(x, y)
         {
             // test a container
             var s1 = renderer.addChild(new PIXI.Container());
             s1.position.set(x - 200, y - 50);
-            s1.addChild(square(100, 0x00ff00, 0, 0));
+            var insideSquare = square(100, 0x00ff00, 0, 0);
+            s1.addChild(insideSquare);
+            s1.shape = new Intersects.Rectangle(s1, {rotation: insideSquare});
 
             // test a sprite
             var s2 = square(75, 0x00ff00, x, y);
+            s2.shape = new Intersects.Rectangle(s2);
             s1.alpha = s2.alpha = 0.5;
-            text('Display Objects\n(non-axis aligned)', x - 100, y + 110);
-            Animate.to(s1, {x: x + 100, y: y + 75, rotation: Math.PI * 2}, 4000, {onEach: function()
+            text('Rectangle-Rectangle', x - 100, y + 110);
+            Animate.to(insideSquare, {rotation: Math.PI * 2}, 4000, { repeat: true, reverse: true});
+            Animate.to(s1, {x: x + 100, y: y + 75}, 4000, {onEach: function()
                 {
-                    var intersect = Intersects.displayObjects(s1, s2);
-                    s1.children[0].tint = s2.tint = intersect ? 0xff0000 : 0x00ff00;
+                    s1.children[0].tint = s2.tint = s1.shape.collidesAABB(s2.shape.AABB) ? 0x0000ff : 0x00ff00;
+                    s1.children[0].tint = s2.tint = s1.shape.collidesRectangle(s2.shape) ? 0xff0000 : s2.tint;
                 }, reverse: true, repeat: true}, Easing.easeInOutSine);
             Animate.to(s2, {x: x - 200, y: y - 25, rotation: Math.PI}, 3000, {repeat: true, reverse: true}, Easing.easeInOutSine);
         }
 
+        // AABB-circle testing is as expensive as circle-circle testing, so it's ommitted
         function circleCircle(x, y)
         {
             var c1 = circle(50, 0x00ff00, x - 100, y);
+            c1.shape = new Intersects.Circle(c1, {radius: 25});
             var c2 = circle(74, 0x00ff00, x + 100, y + 50);
-            text('circle-circle', x, y + 100);
+            c2.shape = new Intersects.Circle(c2);
+            text('Circle-Circle', x, y + 100);
             c1.alpha = c2.alpha = 0.5;
-            Animate.to(c1, {x: x + 100, y: y + 25}, 1000, {repeat: true, reverse: true, onEach: function()
+            Animate.to(c1, {x: x + 100, y: y + 25}, 4000, {repeat: true, reverse: true, onEach: function()
                 {
-                    var intersect = Intersects.circleCircle(c1, c2);
-                    c1.tint = c2.tint = intersect ? 0xff0000 : 0x00ff00;
+                    c1.tint = c2.tint = c1.shape.collidesCircle(c2.shape) ? 0xff0000 : 0x00ff00;
                 }}, Easing.easeInOutSine);
-            Animate.to(c2, {x: x - 100, y: y - 25}, 750, {repeat: true, reverse: true}, Easing.easeInOutSine);
+            Animate.to(c2, {x: x - 100, y: y - 25}, 2000, {repeat: true, reverse: true}, Easing.easeInOutSine);
         }
 
-        function displayObjectAABB(x, y)
+        function lineCircle(x, y)
         {
-            var AABB = {x: x + 50, y: y + 50, width: 50, height: 50};
-            var aabb = renderer.addChild(PIXI.Sprite.fromImage('box.png'));
-            aabb.tint = 0x00ff00;
-            aabb.width = aabb.height = AABB.width;
-            aabb.position.set(AABB.x, AABB.y);
-            var sprite = renderer.addChild(PIXI.Sprite.fromImage('box.png'));
-            sprite.position.set(x + 125, y + 50);
-            sprite.anchor.set(0.5);
-            sprite.width = sprite.height = 75;
-            sprite.tint = 0x00ff00;
-            aabb.alpha = sprite.alpha = 0.5;
-            Animate.to(sprite, {x: x, y: y, rotation: Math.PI / 8}, 600, {repeat: true, reverse: true, onEach:
-                function()
+            var g = renderer.add(new PIXI.Graphics());
+            var p1 = {x: x + 100, y: y};
+            var p2 = {x: x + 120, y: y + 100};
+            line(g, p1, p2);
+            var c = circle(50, 0x00ff00, x, y);
+            c.shape = new Intersects.Circle(c);
+            text('line-Circle', x + 100, y + 120);
+            c.alpha = 0.5;
+            Animate.to(c, {x: x + 200, y: y + 75}, 4000, {repeat: true, reverse: true, onEach: function()
                 {
-                    var intersect = Intersects.displayObjectAABB(sprite, AABB, renderer.stage);
-                    sprite.tint = aabb.tint = intersect ? 0xff0000 : 0x00ff00;
+                    c.tint = c.shape.collidesLine(p1, p2) ? 0xff0000 : 0x00ff00;
                 }}, Easing.easeInOutSine);
         }
 
-        function circleContainer(x, y)
+        function circleRectangle(x, y)
         {
-            var circ = {x: x - 30, y: y - 30, radius: 75};
-            var c = circle(circ.radius * 2, 0x00ff00, circ.x, circ.y);
-            var rectangle = square(50, 0x00ff00, x + 150, y + 30);
-
+            var c = circle(100, 0x00ff00, x - 30, y - 30);
+            c.shape = new Intersects.Circle(c);
+            var rectangle = square(50, 0x00ff00, x + 150, y);
+            rectangle.shape = new Intersects.Rectangle(rectangle);
+            c.alpha = rectangle.alpha = 0.5;
+            text('Circle-Rectangle', x + 75, y + 50);
             Animate.to(rectangle, {rotation: Math.PI * 2}, 13000, {repeat: true});
             Animate.to(rectangle, {x: x + 50}, 2000, {repeat: true, reverse: true}, Easing.easeInOutSine);
-
-            Animate.to([c, circ], {x: x + 100, y: y - 10}, 11500, {repeat: true, reverse: true, onEach:
+            Animate.to(c, {x: x + 100, y: y - 10}, 3000, {repeat: true, reverse: true, onEach:
                 function()
                 {
-                    var intersect = Intersects.displayObjectCircle(rectangle, circ);
-                    c.tint = rectangle.tint = intersect ? 0xff0000 : 0x00ff00;
+                    c.tint = rectangle.tint = c.shape.AABBCollidesAABB(rectangle.shape.AABB) ? 0x0000ff : 0x00ff00;
+                    c.tint = rectangle.tint = c.shape.collidesRectangle(rectangle.shape) ? 0xff0000 : 0x00ff00//c.tint;
                 }}, Easing.easeInOutSine);
 
             var t = text('Circle-Container', x, y + 120);
@@ -215,7 +219,7 @@
         function pixi()
         {
             Update.init();
-            renderer = new Renderer({transparent: true});
+            renderer = new Renderer({transparent: true, autoresize: true, alwaysRender: true});
             renderer.canvas.style.pointerEvents = 'none';
             Update.update();
         }
@@ -281,6 +285,41 @@
             back.width = words.width * 1.25;
             back.height = words.height * 1.25;
             return c;
+        }
+
+        var vg = renderer.add(new PIXI.Graphics());
+        // draw vertices for testing
+        function vertices(shape, clear)
+        {
+            if (clear)
+            {
+                vg.clear();
+            }
+            var v = shape.vertices;
+            for (var i = 0; i < shape.vertices.length; i += 2)
+            {
+                vg.beginFill(0xff00ff, 0.5);
+                vg.drawCircle(v[i], v[i + 1], 10);
+                vg.endFill();
+            }
+        }
+
+        var g = renderer.add(new PIXI.Graphics());
+        // draw AABB vertices
+        function AABB(shape, clear)
+        {
+            if (clear)
+            {
+                g.clear();
+            }
+            var a = shape.AABB;
+            g.beginFill(0xff00ff, 0.25);
+            g.moveTo(a[0], a[1]);
+            g.lineTo(a[2], a[1]);
+            g.lineTo(a[2], a[3]);
+            g.lineTo(a[0], a[3]);
+            g.lineTo(a[0], a[1]);
+            g.endFill();
         }
 
     </script>
