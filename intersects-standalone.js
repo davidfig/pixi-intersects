@@ -61,6 +61,13 @@ class AABB extends Shape
                 AABB[2] = options.point.x + width;
                 AABB[3] = options.point.y + height;
             }
+            else
+            {
+                AABB[0] = options.point.x;
+                AABB[1] = options.point.y;
+                AABB[2] = options.point.x + width;
+                AABB[3] = options.point.y + height;
+            }
         }
         else
         {
@@ -68,6 +75,13 @@ class AABB extends Shape
             {
                 AABB[0] = options.x - (options.center ? width : 0);
                 AABB[1] = options.y - (options.center ? height : 0);
+                AABB[2] = options.x + width;
+                AABB[3] = options.y + height;
+            }
+            else
+            {
+                AABB[0] = options.x;
+                AABB[1] = options.y;
                 AABB[2] = options.x + width;
                 AABB[3] = options.y + height;
             }
@@ -111,37 +125,14 @@ class AABB extends Shape
         return point.x >= AABB[0] && point.x <= AABB[2] && point.y >= AABB[1] && point.y <= AABB[3];
     }
 
-    /**
-     * from http://stackoverflow.com/a/402010/1955997
-     */
     collidesCircle(circle)
     {
-        const AABB = this.AABB;
-        const hw = this.hw;
-        const hh = this.hh;
-        const center = circle.center;
-        const radius = circle.radius;
-        const distX = Math.abs(center.x - AABB[0]);
-        const distY = Math.abs(center.y - AABB[1]);
-
-        if (distX > hw + radius || distY > hh + radius)
-        {
-            return false;
-        }
-
-        if (distX <= hw || distY <= hh)
-        {
-            return true;
-        }
-
-        const x = distX - hw;
-        const y = distY - hh;
-        return x * x + y * y <= circle.radiusSquared;
+        return circle.collidesAABB(this.AABB);
     }
 }
 
 module.exports = AABB;
-},{"./shape.js":6}],2:[function(require,module,exports){
+},{"./shape.js":7}],2:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -290,7 +281,7 @@ class Circle extends Shape
 }
 
 module.exports = Circle;
-},{"./shape.js":6}],3:[function(require,module,exports){
+},{"./shape.js":7}],3:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -309,7 +300,23 @@ Intersects.Polygon = require('./polygon.js');
 Intersects.Circle = require('./circle.js');
 
 window.Intersects = Intersects;
-},{"./AABB.js":1,"./circle.js":2,"./polygon.js":4,"./rectangle.js":5,"./shape.js":6}],4:[function(require,module,exports){
+},{"./AABB.js":1,"./circle.js":2,"./polygon.js":5,"./rectangle.js":6,"./shape.js":7}],4:[function(require,module,exports){
+/**
+ * @license
+ * intersects <https://github.com/davidfig/intersects>
+ * Released under MIT license <https://github.com/davidfig/intersects/license>
+ * Author David Figatner
+ * Copyright (c) 2016 YOPEY YOPEY LLC
+ */
+
+module.exports = {
+    Shape: require('./shape.js'),
+    AABB: require('./AABB.js'),
+    Rectangle: require('./rectangle.js'),
+    Polygon: require('./polygon.js'),
+    Circle: require('./circle.js')
+};
+},{"./AABB.js":1,"./circle.js":2,"./polygon.js":5,"./rectangle.js":6,"./shape.js":7}],5:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -363,7 +370,7 @@ class Polygon extends Shape
 }
 
 module.exports = Polygon;
-},{"./shape.js":6}],5:[function(require,module,exports){
+},{"./shape.js":7}],6:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -530,7 +537,7 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
 }
 
 module.exports = Rectangle;
-},{"./shape.js":6}],6:[function(require,module,exports){
+},{"./shape.js":7}],7:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -702,4 +709,4 @@ class Shape
 }
 
 module.exports = Shape;
-},{}]},{},[2,3,4,5,6]);
+},{}]},{},[2,3,4,5,6,7]);

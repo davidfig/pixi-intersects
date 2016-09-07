@@ -60,6 +60,13 @@ class AABB extends Shape
                 AABB[2] = options.point.x + width;
                 AABB[3] = options.point.y + height;
             }
+            else
+            {
+                AABB[0] = options.point.x;
+                AABB[1] = options.point.y;
+                AABB[2] = options.point.x + width;
+                AABB[3] = options.point.y + height;
+            }
         }
         else
         {
@@ -67,6 +74,13 @@ class AABB extends Shape
             {
                 AABB[0] = options.x - (options.center ? width : 0);
                 AABB[1] = options.y - (options.center ? height : 0);
+                AABB[2] = options.x + width;
+                AABB[3] = options.y + height;
+            }
+            else
+            {
+                AABB[0] = options.x;
+                AABB[1] = options.y;
                 AABB[2] = options.x + width;
                 AABB[3] = options.y + height;
             }
@@ -110,32 +124,9 @@ class AABB extends Shape
         return point.x >= AABB[0] && point.x <= AABB[2] && point.y >= AABB[1] && point.y <= AABB[3];
     }
 
-    /**
-     * from http://stackoverflow.com/a/402010/1955997
-     */
     collidesCircle(circle)
     {
-        const AABB = this.AABB;
-        const hw = this.hw;
-        const hh = this.hh;
-        const center = circle.center;
-        const radius = circle.radius;
-        const distX = Math.abs(center.x - AABB[0]);
-        const distY = Math.abs(center.y - AABB[1]);
-
-        if (distX > hw + radius || distY > hh + radius)
-        {
-            return false;
-        }
-
-        if (distX <= hw || distY <= hh)
-        {
-            return true;
-        }
-
-        const x = distX - hw;
-        const y = distY - hh;
-        return x * x + y * y <= circle.radiusSquared;
+        return circle.collidesAABB(this.AABB);
     }
 }
 
