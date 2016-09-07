@@ -122,9 +122,6 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
         vertices[5] = yCalc(+hw, +hh);
         vertices[6] = xCalc(-hw, +hh);
         vertices[7] = yCalc(-hw, +hh);
-
-        this.update(true);
-        this.verticesDirty = false;
     }
 
     get AABB()
@@ -141,6 +138,11 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
         if (!this.static && (this.verticesDirty || this.checkLast()))
         {
             this.updateVertices();
+            if (!this.verticesDirty)
+            {
+                this.update(true);
+                this.verticesDirty = false;
+            }
         }
         return this._vertices;
     }

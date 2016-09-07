@@ -168,27 +168,16 @@ class Circle extends Shape
 
     /**
      * @param {object} options
-     * @param {boolean=true} options.static - this object does not need to be updated
+     * @param {boolean=false} options.static - this object does not need to be updated
      * @param {object=this.article} options.positionObject - use this to update position (and rotation unless rotationObject is defined)
      * @param {object=this.article} options.rotationObject - use this to update rotation
      * @param {number=} options.radius - otherwise article.width / 2 is used as radius
      */
     set(options)
     {
-        if (typeof options.radius !== 'undefined')
-        {
-            this.radius = options.radius;
-        }
-        else
-        {
-            this.radius = this.article.width / 2;
-        }
+        this.radius = options.radius || this.article.width / 2;
         this.radiusSquared = this.radius * this.radius;
-        if (typeof options.static !== 'undefined')
-        {
-            this.static = options.static;
-        }
-
+        this.static = options.static;
         this.center = options.positionObject ? options.positionObject : this.article;
         this.rotation = options.rotationObject ? options.rotationObject : (options.positionObject ? options.positionObject : this.article);
         this.update(true);
@@ -242,41 +231,43 @@ class Circle extends Shape
         }
 
         const center = this.center;
-
-        // public static bool IntersectLineCircle(Vector2 location, float radius, Vector2 lineFrom, Vector2 lineTo)
-
-        const ac = [center.x - p1.x, center.y - p1.y]; // location - lineFrom;
-        const ab = [p2.x - p1.x, p2.y - p1.y]; // lineTo - lineFrom;
+        const ac = [center.x - p1.x, center.y - p1.y];
+        const ab = [p2.x - p1.x, p2.y - p1.y];
         const ab2 = dot(ab, ab);
         const acab = dot(ac, ab);
         let t = acab / ab2;
         t = (t < 0) ? 0 : t;
         t = (t > 1) ? 1 : t;
-        let h = [(ab[0] * t + p1.x) - center.x, (ab[1] * t + p1.y) - center.y]; // ((ab * t) + lineFrom) - location;
+        let h = [(ab[0] * t + p1.x) - center.x, (ab[1] * t + p1.y) - center.y];
         const h2 = dot(h, h);
         return h2 <= this.radiusSquared;
-
-        // // Project point on a line
-        // var ap = [center.x - p1.x, center.y - p1.y];
-        // var ab = [p2.x - p1.x, p2.y - p1.y];
-        // var coef = dotProduct2(ap, ab) / dotProduct2(ab, ab);
-        // var check = [p1.x + (coef * ab[0]), p2.y + (coef * ab[1])];
-
-        // // checks if the projected point is on the specified segment
-        // return (p1.x < check[0] && check[0] < p2.x) || (p1.x > check[0] && check[0] > p2.x) ||
-        //     (p1.y < check[1] && check[1] < p2.y) || (p1.y > check[1] && check[1] > p2.y);
     }
 
     /**
      * from http://stackoverflow.com/a/402019/1955997
      */
-    collidesRectangle(rectangle)
+    collidesRectangle(rectangle, g)
     {
         const center = this.center;
         if (rectangle.collidesPoint(center))
         {
             return true;
         }
+
+        const vertices = rectangle.vertices;
+
+g.clear();
+for (var i = 0; i < vertices.length; i += 2)
+{
+    g.beginFill(0xff00ff)
+    g.drawCircle(vertices[i], vertices[i + 1], 10)
+    g.endFill();
+}
+
+        return this.collidesLine({x: vertices[0], y: vertices[1]}, {x: vertices[2], y: vertices[1]}) ||
+            this.collidesLine({x: vertices[2], y: vertices[1]}, {x: vertices[2], y: vertices[3]}) ||
+            this.collidesLine({x: vertices[2], y: vertices[3]}, {x: vertices[0], y: vertices[3]}) ||
+            this.collidesLine({x: vertices[0], y: vertices[3]}, {x: vertices[0], y: vertices[1]});
     }
 
     /**
@@ -377,6 +368,7 @@ class Polygon extends Shape
         }
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
+        this.static = options.static;
     }
 
     /**
@@ -516,9 +508,6 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
         vertices[5] = yCalc(+hw, +hh);
         vertices[6] = xCalc(-hw, +hh);
         vertices[7] = yCalc(-hw, +hh);
-
-        this.update(true);
-        this.verticesDirty = false;
     }
 
     get AABB()
@@ -535,6 +524,11 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
         if (!this.static && (this.verticesDirty || this.checkLast()))
         {
             this.updateVertices();
+            if (!this.verticesDirty)
+            {
+                this.update(true);
+                this.verticesDirty = false;
+            }
         }
         return this._vertices;
     }

@@ -36,6 +36,7 @@ class Polygon extends Shape
         }
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
+        this.static = options.static;
     }
 
     /**
