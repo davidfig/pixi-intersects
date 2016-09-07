@@ -102,7 +102,7 @@ class Circle extends Shape
     /**
      * from http://stackoverflow.com/a/402019/1955997
      */
-    collidesRectangle(rectangle, g)
+    collidesRectangle(rectangle)
     {
         const center = this.center;
         if (rectangle.collidesPoint(center))
@@ -111,19 +111,10 @@ class Circle extends Shape
         }
 
         const vertices = rectangle.vertices;
-
-g.clear();
-for (var i = 0; i < vertices.length; i += 2)
-{
-    g.beginFill(0xff00ff)
-    g.drawCircle(vertices[i], vertices[i + 1], 10)
-    g.endFill();
-}
-
-        return this.collidesLine({x: vertices[0], y: vertices[1]}, {x: vertices[2], y: vertices[1]}) ||
-            this.collidesLine({x: vertices[2], y: vertices[1]}, {x: vertices[2], y: vertices[3]}) ||
-            this.collidesLine({x: vertices[2], y: vertices[3]}, {x: vertices[0], y: vertices[3]}) ||
-            this.collidesLine({x: vertices[0], y: vertices[3]}, {x: vertices[0], y: vertices[1]});
+        return this.collidesLine({x: vertices[0], y: vertices[1]}, {x: vertices[2], y: vertices[3]}) ||
+            this.collidesLine({x: vertices[2], y: vertices[3]}, {x: vertices[4], y: vertices[5]}) ||
+            this.collidesLine({x: vertices[4], y: vertices[5]}, {x: vertices[6], y: vertices[7]}) ||
+            this.collidesLine({x: vertices[6], y: vertices[7]}, {x: vertices[0], y: vertices[1]});
     }
 
     /**

@@ -152,6 +152,11 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
         return this.collidesPolygon(rectangle);
     }
 
+    collidesCircle(circle)
+    {
+        return circle.collidesRectangle(this);
+    }
+
     collidesAABB(AABB)
     {
         return this.collidesPolygon(AABB, true);
