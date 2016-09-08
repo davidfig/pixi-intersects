@@ -109,11 +109,6 @@ class AABB extends Shape
         return this.collidesPolygon(rectangle);
     }
 
-    collidesPolygon(polygon)
-    {
-        return this.collidesPolygon(polygon);
-    }
-
     collidesAABB(AABB)
     {
         return this.AABBCollidesAABB(AABB);
