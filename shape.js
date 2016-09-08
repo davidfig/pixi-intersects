@@ -146,7 +146,7 @@ class Shape
 
     collides(shape)
     {
-        return this['collides' + shape.type](shape);
+        return ['collides' + shape.type](shape);
     }
 
     /**
