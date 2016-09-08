@@ -140,6 +140,11 @@ class Shape
         return Shape.lineLine(p1, p2, vertices[length - 1], vertices[0]);
     }
 
+    checkLast()
+    {
+        return false;
+    }
+
     collides(shape)
     {
         return this['collides' + shape.type](shape);

@@ -19,6 +19,7 @@ class AABB extends Shape
     constructor(article, options)
     {
         super(article);
+        this.type = 'AABB';
         options = options || {};
         this.vertices = [];
         this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
@@ -152,6 +153,7 @@ class Circle extends Shape
     constructor(article, options)
     {
         super(article);
+        this.type = 'Circle';
         this._AABB = [];
         options = options || {};
         this.set(options);
@@ -336,6 +338,7 @@ class Polygon extends Shape
     constructor(article, options)
     {
         super(article);
+        this.type = 'Polygon';
         options = options || {};
         this.set(options);
     }
@@ -391,6 +394,7 @@ class Rectangle extends Shape
     constructor(article, options)
     {
         super(article);
+        this.type = 'Rectangle';
         options = options || {};
         this.last = {};
         this._vertices = [];
@@ -680,9 +684,14 @@ class Shape
         return Shape.lineLine(p1, p2, vertices[length - 1], vertices[0]);
     }
 
-    static collides(shape)
+    checkLast()
     {
-        return this['collides' + (typeof shape)](shape);
+        return false;
+    }
+
+    collides(shape)
+    {
+        return this['collides' + shape.type](shape);
     }
 
     /**
