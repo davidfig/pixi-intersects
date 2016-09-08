@@ -128,16 +128,15 @@ class Shape
         }
 
         // check for intersections for all of the sides
-        for (let i = 0; i < length - 1; i++)
+        for (let i = 0; i < length; i += 2)
         {
-            if (Shape.lineLine(p1, p2, vertices[i], vertices[i + 1]))
+            const j = (i + 2) % length;
+            if (Shape.lineLine(p1, p2, {x: vertices[i], y: vertices[i + 1]}, {x: vertices[j], y: vertices[j + 1]}))
             {
                 return true;
             }
         }
-
-        // finally check if the first vertex -> last vertex line intersects
-        return Shape.lineLine(p1, p2, vertices[length - 1], vertices[0]);
+        return false;
     }
 
     checkLast()

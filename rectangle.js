@@ -57,12 +57,8 @@ class Rectangle extends Shape
             const s = Math.abs(transform._sr / 2);
             const c = Math.abs(transform._cr / 2);
 
-if (transform._sr !== Math.sin(this.rotation.rotation))
-{
-    debug('PIXI transform not updated in Rectangle', 'error');
-}
-
-            var width = this.width, height = this.height;
+            const width = this.width;
+            const height = this.height;
             const ex = height * s + width * c;  // x extent of AABB
             const ey = height * c + width * s;  // y extent of AABB
 

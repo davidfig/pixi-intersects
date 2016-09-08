@@ -9,7 +9,7 @@
 
 const Shape = require('./shape.js');
 
-/** use this for non-rotating rectangular shapes (e.g., walls) */
+/** use this for non-moving rectangular shapes (e.g., walls) */
 class AABB extends Shape
 {
     /**
@@ -154,7 +154,7 @@ class Circle extends Shape
     {
         super(article);
         this.type = 'Circle';
-        this._AABB = [];
+        this.AABB = [];
         options = options || {};
         this.set(options);
     }
@@ -176,17 +176,11 @@ class Circle extends Shape
         this.update(true);
     }
 
-    get AABB()
-    {
-        this.update();
-        return this._AABB;
-    }
-
     update(dirty)
     {
         if (dirty || !this.static)
         {
-            const AABB = this._AABB;
+            const AABB = this.AABB;
             const radius = this.radius;
             const center = this.center;
             AABB[0] = center.x - radius;
@@ -337,6 +331,7 @@ class Polygon extends Shape
      */
     constructor(article, options)
     {
+debug('TODO: Polygon:Shapes');
         super(article);
         this.type = 'Polygon';
         options = options || {};
@@ -396,9 +391,8 @@ class Rectangle extends Shape
         super(article);
         this.type = 'Rectangle';
         options = options || {};
-        this.last = {};
         this._vertices = [];
-        this._AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
+        this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
         this.set(options);
     }
 
@@ -434,41 +428,20 @@ class Rectangle extends Shape
             const s = Math.abs(transform._sr / 2);
             const c = Math.abs(transform._cr / 2);
 
-if (transform._sr !== Math.sin(this.rotation.rotation))
-{
-    debug('PIXI transform not updated in Rectangle', 'error');
-}
-
-            var width = this.width, height = this.height;
+            const width = this.width;
+            const height = this.height;
             const ex = height * s + width * c;  // x extent of AABB
             const ey = height * c + width * s;  // y extent of AABB
 
-            const AABB = this._AABB;
+            const AABB = this.AABB;
             const center = this.center;
             AABB[0] = center.x - ex;
             AABB[1] = center.y - ey;
             AABB[2] = center.x + ex;
             AABB[3] = center.y + ey;
 
-            this.updateLast();
             this.verticesDirty = true;
         }
-    }
-
-    checkLast()
-    {
-        const last = this.last;
-        const center = this.center;
-        return center.x !== last.centerX || center.y !== last.centerY || last.rotation !== this.rotation.rotation;
-    }
-
-    updateLast()
-    {
-        const last = this.last;
-        const center = this.center;
-        last.centerX = center.x;
-        last.centerY = center.y;
-        last.rotation = this.rotation.rotation;
     }
 
     updateVertices()
@@ -499,27 +472,15 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
         vertices[5] = yCalc(+hw, +hh);
         vertices[6] = xCalc(-hw, +hh);
         vertices[7] = yCalc(-hw, +hh);
-    }
 
-    get AABB()
-    {
-        if (!this.static && this.checkLast())
-        {
-            this.update();
-        }
-        return this._AABB;
+        this.verticesDirty = false;
     }
 
     get vertices()
     {
-        if (!this.static && (this.verticesDirty || this.checkLast()))
+        if (!this.static && this.verticesDirty)
         {
             this.updateVertices();
-            if (!this.verticesDirty)
-            {
-                this.update(true);
-                this.verticesDirty = false;
-            }
         }
         return this._vertices;
     }
@@ -672,16 +633,15 @@ class Shape
         }
 
         // check for intersections for all of the sides
-        for (let i = 0; i < length - 1; i++)
+        for (let i = 0; i < length; i += 2)
         {
-            if (Shape.lineLine(p1, p2, vertices[i], vertices[i + 1]))
+            const j = (i + 2) % length;
+            if (Shape.lineLine(p1, p2, {x: vertices[i], y: vertices[i + 1]}, {x: vertices[j], y: vertices[j + 1]}))
             {
                 return true;
             }
         }
-
-        // finally check if the first vertex -> last vertex line intersects
-        return Shape.lineLine(p1, p2, vertices[length - 1], vertices[0]);
+        return false;
     }
 
     checkLast()
