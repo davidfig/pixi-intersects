@@ -18,7 +18,7 @@ class Circle extends Shape
     {
         super(article);
         this.type = 'Circle';
-        this._AABB = [];
+        this.AABB = [];
         options = options || {};
         this.set(options);
     }
@@ -40,17 +40,11 @@ class Circle extends Shape
         this.update(true);
     }
 
-    get AABB()
-    {
-        this.update();
-        return this._AABB;
-    }
-
     update(dirty)
     {
         if (dirty || !this.static)
         {
-            const AABB = this._AABB;
+            const AABB = this.AABB;
             const radius = this.radius;
             const center = this.center;
             AABB[0] = center.x - radius;

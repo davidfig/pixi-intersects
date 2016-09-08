@@ -20,9 +20,8 @@ class Rectangle extends Shape
         super(article);
         this.type = 'Rectangle';
         options = options || {};
-        this.last = {};
         this._vertices = [];
-        this._AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
+        this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
         this.set(options);
     }
 
@@ -67,32 +66,15 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
             const ex = height * s + width * c;  // x extent of AABB
             const ey = height * c + width * s;  // y extent of AABB
 
-            const AABB = this._AABB;
+            const AABB = this.AABB;
             const center = this.center;
             AABB[0] = center.x - ex;
             AABB[1] = center.y - ey;
             AABB[2] = center.x + ex;
             AABB[3] = center.y + ey;
 
-            this.updateLast();
             this.verticesDirty = true;
         }
-    }
-
-    checkLast()
-    {
-        const last = this.last;
-        const center = this.center;
-        return center.x !== last.centerX || center.y !== last.centerY || last.rotation !== this.rotation.rotation;
-    }
-
-    updateLast()
-    {
-        const last = this.last;
-        const center = this.center;
-        last.centerX = center.x;
-        last.centerY = center.y;
-        last.rotation = this.rotation.rotation;
     }
 
     updateVertices()
@@ -123,27 +105,15 @@ if (transform._sr !== Math.sin(this.rotation.rotation))
         vertices[5] = yCalc(+hw, +hh);
         vertices[6] = xCalc(-hw, +hh);
         vertices[7] = yCalc(-hw, +hh);
-    }
 
-    get AABB()
-    {
-        if (!this.static && this.checkLast())
-        {
-            this.update();
-        }
-        return this._AABB;
+        this.verticesDirty = false;
     }
 
     get vertices()
     {
-        if (!this.static && (this.verticesDirty || this.checkLast()))
+        if (!this.static && this.verticesDirty)
         {
             this.updateVertices();
-            if (!this.verticesDirty)
-            {
-                this.update(true);
-                this.verticesDirty = false;
-            }
         }
         return this._vertices;
     }

@@ -8,7 +8,7 @@
 
 const Shape = require('./shape.js');
 
-/** use this for non-rotating rectangular shapes (e.g., walls) */
+/** use this for non-moving rectangular shapes (e.g., walls) */
 class AABB extends Shape
 {
     /**
