@@ -3,20 +3,20 @@
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/ascetic.min.css">
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/highlight.min.js"></script>
 
-    <!--<script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
+    <script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
     <script src="https://rawgit.com/davidfig/debug/master/debug.js"></script>
     <script src="https://rawgit.com/davidfig/update/master/update.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/animate.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/easing.js"></script>
-    <script src="https://rawgit.com/davidfig/intersects/master/intersects.js"></script>-->
+    <script src="https://rawgit.com/davidfig/intersects/master/intersects-standalone.js"></script>
 
     <!-- for local testing -->
-    <script src="../renderer/renderer.js"></script>
+    <!--<script src="../renderer/renderer.js"></script>
     <script src="../debug/debug.js"></script>
     <script src="../update/update.js"></script>
     <script src="../animate/animate.js"></script>
     <script src="../animate/easing.js"></script>
-    <script src="../intersects/intersects.js"></script>
+    <script src="../intersects/intersects-standalone.js"></script>-->
 
     <style>
         body {
@@ -56,6 +56,7 @@
         // set up renderer
         var renderer;
         pixi();
+        var aabbG = renderer.add(new PIXI.Graphics());
 
         // initialize animation
         Animate.init();
@@ -69,6 +70,7 @@
         circleCircle(300, 300);
         lineCircle(300, 500);
         circleRectangle(650, 590);
+        lineAABB(600, 300);
 
         // point and AABB
         function pointInAABB(x, y)
@@ -132,8 +134,8 @@
             s.alpha = 0.5;
             Animate.to(s, {x: x - 100, y: y - 75, rotation: 2 * Math.PI}, 3000, {onEach: function()
                 {
-                    var intersect = s.shape.collidesLine(p1, p2);
-                    s.tint = intersect ? 0xff0000 : 0x00ff00;
+                    s.shape.update();
+                    s.tint = s.shape.collidesLine(p1, p2) ? 0xff0000 : 0x00ff00;
                 }, reverse: true, repeat: true}, Easing.easeInOutSine);
 
         }
@@ -156,6 +158,8 @@
             Animate.to(insideSquare, {rotation: Math.PI * 2}, 4000, { repeat: true, reverse: true});
             Animate.to(s1, {x: x + 100, y: y + 75}, 4000, {onEach: function()
                 {
+                    s1.shape.update();
+                    s2.shape.update();
                     s1.children[0].tint = s2.tint = s1.shape.collidesAABB(s2.shape.AABB) ? 0x0000ff : 0x00ff00;
                     s1.children[0].tint = s2.tint = s1.shape.collidesRectangle(s2.shape) ? 0xff0000 : s2.tint;
                 }, reverse: true, repeat: true}, Easing.easeInOutSine);
@@ -207,12 +211,33 @@
             Animate.to(c, {x: x + 100, y: y - 10}, 3000, {repeat: true, reverse: true, onEach:
                 function()
                 {
+                    c.shape.update();
+                    rectangle.shape.update();
                     c.tint = rectangle.tint = c.shape.AABBCollidesAABB(rectangle.shape.AABB) ? 0x0000ff : 0x00ff00;
                     c.tint = rectangle.tint = c.shape.collidesRectangle(rectangle.shape) ? 0xff0000 : 0x00ff00//c.tint;
                 }}, Easing.easeInOutSine);
 
             var t = text('Circle-Container', x, y + 120);
             t.x += t.width / 2;
+        }
+
+        function lineAABB(x, y)
+        {
+            var s = square(80, 0x00ff00, x, y);
+            s.alpha = 0.5;
+            s.shape = new Intersects.AABB(null, {x: x, y: y, center: true, square: 80});
+            var p1 = {x: x, y: y};
+            var p2 = {x: x, y: y + 100};
+            var g = renderer.add(new PIXI.Graphics());
+            g.alpha = 0.5;
+            text('line-AABB', x, y + 120);
+            Animate.to(p1, {x: x - 150}, 4000, {repeat: true, reverse: true, onEach:
+                function()
+                {
+                    g.clear();
+                    line(g, p1, p2);
+                    s.tint = s.shape.collidesLine(p1, p2) ? 0xff0000 : 0x00ff00;
+                }}, Easing.easeInOutSine);
         }
 
         // initialize renderer and update loop for animation (see github.com/davidfig/renderer/, github.com/davidfig/update, and github.com/davidfig/animate)
@@ -304,22 +329,21 @@
             }
         }
 
-        var g = renderer.add(new PIXI.Graphics());
         // draw AABB vertices
         function AABB(shape, clear)
         {
             if (clear)
             {
-                g.clear();
+                aabbG.clear();
             }
             var a = shape.AABB;
-            g.beginFill(0xff00ff, 0.25);
-            g.moveTo(a[0], a[1]);
-            g.lineTo(a[2], a[1]);
-            g.lineTo(a[2], a[3]);
-            g.lineTo(a[0], a[3]);
-            g.lineTo(a[0], a[1]);
-            g.endFill();
+            aabbG.beginFill(0xff00ff);
+            aabbG.moveTo(a[0], a[1]);
+            aabbG.lineTo(a[2], a[1]);
+            aabbG.lineTo(a[2], a[3]);
+            aabbG.lineTo(a[0], a[3]);
+            aabbG.lineTo(a[0], a[1]);
+            aabbG.endFill();
         }
 
     </script>
