@@ -24,7 +24,7 @@ class Shape
      * collides with this shape's AABB box
      * @param {object} AABB
      */
-    AABBCollidesAABB(AABB)
+    AABBs(AABB)
     {
         var AABB2 = this.AABB;
         return !(AABB[2] < AABB2[0] || AABB2[2] < AABB[0] || AABB[3] < AABB2[1] || AABB2[3] < AABB[1]);
