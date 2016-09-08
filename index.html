@@ -95,7 +95,7 @@
             text('Point-Rectangle', x, y + 68);
             Animate.to(c, {x: x + 100, y: y + 25}, 2000, {reverse: true, repeat: true, onEach: function()
                 {
-                    s.tint = s.shape.AABBCollidesAABB([c.x, c.y, c.x, c.y]) ? 0x0000ff : 0x00ff00;
+                    s.tint = s.shape.AABBs([c.x, c.y, c.x, c.y]) ? 0x0000ff : 0x00ff00;
                     s.tint = s.shape.collidesPoint(c) ? 0xff0000 : s.tint;
                 }}, Easing.easeInOutSine);
         }
@@ -213,7 +213,7 @@
                 {
                     c.shape.update();
                     rectangle.shape.update();
-                    c.tint = rectangle.tint = c.shape.AABBCollidesAABB(rectangle.shape.AABB) ? 0x0000ff : 0x00ff00;
+                    c.tint = rectangle.tint = c.shape.AABBs(rectangle.shape.AABB) ? 0x0000ff : 0x00ff00;
                     c.tint = rectangle.tint = c.shape.collidesRectangle(rectangle.shape) ? 0xff0000 : 0x00ff00//c.tint;
                 }}, Easing.easeInOutSine);
 
