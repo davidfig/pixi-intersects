@@ -133,7 +133,7 @@ class AABB extends Shape
 }
 
 module.exports = AABB;
-},{"./shape.js":7}],2:[function(require,module,exports){
+},{"./shape.js":6}],2:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -277,7 +277,7 @@ class Circle extends Shape
 }
 
 module.exports = Circle;
-},{"./shape.js":7}],3:[function(require,module,exports){
+},{"./shape.js":6}],3:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -296,23 +296,7 @@ Intersects.Polygon = require('./polygon.js');
 Intersects.Circle = require('./circle.js');
 
 window.Intersects = Intersects;
-},{"./AABB.js":1,"./circle.js":2,"./polygon.js":5,"./rectangle.js":6,"./shape.js":7}],4:[function(require,module,exports){
-/**
- * @license
- * intersects <https://github.com/davidfig/intersects>
- * Released under MIT license <https://github.com/davidfig/intersects/license>
- * Author David Figatner
- * Copyright (c) 2016 YOPEY YOPEY LLC
- */
-
-module.exports = {
-    Shape: require('./shape.js'),
-    AABB: require('./AABB.js'),
-    Rectangle: require('./rectangle.js'),
-    Polygon: require('./polygon.js'),
-    Circle: require('./circle.js')
-};
-},{"./AABB.js":1,"./circle.js":2,"./polygon.js":5,"./rectangle.js":6,"./shape.js":7}],5:[function(require,module,exports){
+},{"./AABB.js":1,"./circle.js":2,"./polygon.js":4,"./rectangle.js":5,"./shape.js":6}],4:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -368,7 +352,7 @@ debug('TODO: Polygon:Shapes');
 }
 
 module.exports = Polygon;
-},{"./shape.js":7}],6:[function(require,module,exports){
+},{"./shape.js":6}],5:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -502,7 +486,7 @@ class Rectangle extends Shape
 }
 
 module.exports = Rectangle;
-},{"./shape.js":7}],7:[function(require,module,exports){
+},{"./shape.js":6}],6:[function(require,module,exports){
 /**
  * @license
  * intersects <https://github.com/davidfig/intersects>
@@ -651,7 +635,7 @@ class Shape
 
     collides(shape)
     {
-        return this['collides' + shape.type](shape);
+        return ['collides' + shape.type](shape);
     }
 
     /**
@@ -678,4 +662,4 @@ class Shape
 }
 
 module.exports = Shape;
-},{}]},{},[2,3,4,5,6,7]);
+},{}]},{},[2,3,4,5,6]);
