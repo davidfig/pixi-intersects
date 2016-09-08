@@ -650,7 +650,7 @@ class Shape
 
     collides(shape)
     {
-        return ['collides' + shape.SHAPE](shape);
+        return this['collides' + shape.SHAPE](shape);
     }
 
     /**
