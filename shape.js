@@ -52,17 +52,17 @@ class Shape
 
     collidesCircle()
     {
-        debug('TODO: ' + this.typeof + ' collides Circle.');
+        debug('TODO: ' + this.SHAPE + ' collides Circle.');
     }
 
     collidesRectangle()
     {
-        debug('TODO: ' + this.typeof + ' collides Rectangle.');
+        debug('TODO: ' + this.SHAPE + ' collides Rectangle.');
     }
 
     collidesAABB()
     {
-        debug('TODO: ' + this.typeof + ' collides AABB.');
+        debug('TODO: ' + this.SHAPE + ' collides AABB.');
     }
 
     /**

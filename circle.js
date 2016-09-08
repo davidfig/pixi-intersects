@@ -17,7 +17,7 @@ class Circle extends Shape
     constructor(article, options)
     {
         super(article);
-        this.type = 'Circle';
+        this.SHAPE = 'Circle';
         this.AABB = [];
         options = options || {};
         this.set(options);

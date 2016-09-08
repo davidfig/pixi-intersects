@@ -18,7 +18,7 @@ class Polygon extends Shape
     {
 debug('TODO: Polygon:Shapes');
         super(article);
-        this.type = 'Polygon';
+        this.SHAPE = 'Polygon';
         options = options || {};
         this.set(options);
     }

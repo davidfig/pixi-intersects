@@ -18,7 +18,7 @@ class AABB extends Shape
     constructor(article, options)
     {
         super(article);
-        this.type = 'AABB';
+        this.SHAPE = 'AABB';
         options = options || {};
         this.vertices = [];
         this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]

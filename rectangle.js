@@ -8,7 +8,6 @@
 
 const Shape = require('./shape.js');
 
-/* global debug */
 class Rectangle extends Shape
 {
     /**
@@ -18,7 +17,7 @@ class Rectangle extends Shape
     constructor(article, options)
     {
         super(article);
-        this.type = 'Rectangle';
+        this.SHAPE = 'Rectangle';
         options = options || {};
         this._vertices = [];
         this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
