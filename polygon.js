@@ -16,7 +16,6 @@ class Polygon extends Shape
      */
     constructor(article, options)
     {
-debug('TODO: Polygon:Shapes');
         super(article);
         this.SHAPE = 'Polygon';
         options = options || {};
@@ -47,8 +46,6 @@ debug('TODO: Polygon:Shapes');
     update()
     {
 // TODO
-        const s = Math.abs(this.transform._sr / 2);
-        const c = Math.abs(this.transform._cr / 2);
     }
 }
 

@@ -51,10 +51,19 @@ class Rectangle extends Shape
     {
         if (dirty || !this.static)
         {
-            // use PIXI's transform for cos and sin (this can be replaced with a simple Math.cos/sin call--don't forget to cache the values)
+            // use PIXI's transform for cos and sin, if available
             const transform = this.rotation.transform;
-            const s = Math.abs(transform._sr / 2);
-            const c = Math.abs(transform._cr / 2);
+            let s, c;
+            if (transform)
+            {
+                s = Math.abs(transform._sr / 2);
+                c = Math.abs(transform._cr / 2);
+            }
+            else
+            {
+                s = Math.abs(Math.sin(this.rotation.rotation) / 2);
+                c = Math.abs(Math.cos(this.rotation.rotation) / 2);
+            }
 
             const width = this.width;
             const height = this.height;
