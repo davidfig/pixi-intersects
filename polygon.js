@@ -24,7 +24,6 @@ class Polygon extends Shape
 
     /**
      * @param {object} options
-     * @param {boolean=false} options.static - this object does not need to be updated
      * @param {PIXI.Point[]} options.points
      * @param {PIXI.DisplayObject=} options.center - object to use for position (and rotation, unless separately defined)
      * @param {PIXI.DisplayObject=} options.rotation - object to use for rotation instead of options.center or article
@@ -37,7 +36,6 @@ class Polygon extends Shape
         }
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
-        this.static = options.static;
     }
 
     /**

@@ -25,7 +25,6 @@ class Circle extends Shape
 
     /**
      * @param {object} options
-     * @param {boolean=false} options.static - this object does not need to be updated
      * @param {object=this.article} options.positionObject - use this to update position (and rotation unless rotationObject is defined)
      * @param {object=this.article} options.rotationObject - use this to update rotation
      * @param {number=} options.radius - otherwise article.width / 2 is used as radius
@@ -34,24 +33,20 @@ class Circle extends Shape
     {
         this.radius = options.radius || this.article.width / 2;
         this.radiusSquared = this.radius * this.radius;
-        this.static = options.static;
         this.center = options.positionObject ? options.positionObject : this.article;
         this.rotation = options.rotationObject ? options.rotationObject : (options.positionObject ? options.positionObject : this.article);
-        this.update(true);
+        this.update();
     }
 
-    update(dirty)
+    update()
     {
-        if (dirty || !this.static)
-        {
-            const AABB = this.AABB;
-            const radius = this.radius;
-            const center = this.center;
-            AABB[0] = center.x - radius;
-            AABB[1] = center.y - radius;
-            AABB[2] = center.x + radius;
-            AABB[3] = center.y + radius;
-        }
+        const AABB = this.AABB;
+        const radius = this.radius;
+        const center = this.center;
+        AABB[0] = center.x - radius;
+        AABB[1] = center.y - radius;
+        AABB[2] = center.x + radius;
+        AABB[3] = center.y + radius;
     }
 
     collidesCircle(circle)

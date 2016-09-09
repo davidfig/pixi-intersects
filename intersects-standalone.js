@@ -156,7 +156,6 @@ class Circle extends Shape
 
     /**
      * @param {object} options
-     * @param {boolean=false} options.static - this object does not need to be updated
      * @param {object=this.article} options.positionObject - use this to update position (and rotation unless rotationObject is defined)
      * @param {object=this.article} options.rotationObject - use this to update rotation
      * @param {number=} options.radius - otherwise article.width / 2 is used as radius
@@ -165,24 +164,20 @@ class Circle extends Shape
     {
         this.radius = options.radius || this.article.width / 2;
         this.radiusSquared = this.radius * this.radius;
-        this.static = options.static;
         this.center = options.positionObject ? options.positionObject : this.article;
         this.rotation = options.rotationObject ? options.rotationObject : (options.positionObject ? options.positionObject : this.article);
-        this.update(true);
+        this.update();
     }
 
-    update(dirty)
+    update()
     {
-        if (dirty || !this.static)
-        {
-            const AABB = this.AABB;
-            const radius = this.radius;
-            const center = this.center;
-            AABB[0] = center.x - radius;
-            AABB[1] = center.y - radius;
-            AABB[2] = center.x + radius;
-            AABB[3] = center.y + radius;
-        }
+        const AABB = this.AABB;
+        const radius = this.radius;
+        const center = this.center;
+        AABB[0] = center.x - radius;
+        AABB[1] = center.y - radius;
+        AABB[2] = center.x + radius;
+        AABB[3] = center.y + radius;
     }
 
     collidesCircle(circle)
@@ -334,7 +329,6 @@ class Polygon extends Shape
 
     /**
      * @param {object} options
-     * @param {boolean=false} options.static - this object does not need to be updated
      * @param {PIXI.Point[]} options.points
      * @param {PIXI.DisplayObject=} options.center - object to use for position (and rotation, unless separately defined)
      * @param {PIXI.DisplayObject=} options.rotation - object to use for rotation instead of options.center or article
@@ -347,7 +341,6 @@ class Polygon extends Shape
         }
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
-        this.static = options.static;
     }
 
     /**
@@ -389,7 +382,6 @@ class Rectangle extends Shape
 
     /**
      * @param {object} options
-     * @param {boolean=false} options.static - this object does not need to be updated
      * @param {number=} options.width - width of object when aligned
      * @param {number=} options.height - height of object when aligned
      * @param {object=} options.center - object to use for position (and rotation, unless separately defined)
@@ -397,51 +389,47 @@ class Rectangle extends Shape
      */
     set(options)
     {
-        this.static = options.static;
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
         this.width = options.width || this.article.width;
         this.height = options.height || this.article.height;
         this.hw = this.width / 2;
         this.hh = this.height / 2;
-        this.update(true);
+        this.update();
     }
 
     /**
      * based on http://www.willperone.net/Code/coderr.php
      */
-    update(dirty)
+    update()
     {
-        if (dirty || !this.static)
+        // use PIXI's transform for cos and sin, if available
+        const transform = this.rotation.transform;
+        let s, c;
+        if (transform)
         {
-            // use PIXI's transform for cos and sin, if available
-            const transform = this.rotation.transform;
-            let s, c;
-            if (transform)
-            {
-                s = Math.abs(transform._sr / 2);
-                c = Math.abs(transform._cr / 2);
-            }
-            else
-            {
-                s = Math.abs(Math.sin(this.rotation.rotation) / 2);
-                c = Math.abs(Math.cos(this.rotation.rotation) / 2);
-            }
-
-            const width = this.width;
-            const height = this.height;
-            const ex = height * s + width * c;  // x extent of AABB
-            const ey = height * c + width * s;  // y extent of AABB
-
-            const AABB = this.AABB;
-            const center = this.center;
-            AABB[0] = center.x - ex;
-            AABB[1] = center.y - ey;
-            AABB[2] = center.x + ex;
-            AABB[3] = center.y + ey;
-
-            this.verticesDirty = true;
+            s = Math.abs(transform._sr / 2);
+            c = Math.abs(transform._cr / 2);
         }
+        else
+        {
+            s = Math.abs(Math.sin(this.rotation.rotation) / 2);
+            c = Math.abs(Math.cos(this.rotation.rotation) / 2);
+        }
+
+        const width = this.width;
+        const height = this.height;
+        const ex = height * s + width * c;  // x extent of AABB
+        const ey = height * c + width * s;  // y extent of AABB
+
+        const AABB = this.AABB;
+        const center = this.center;
+        AABB[0] = center.x - ex;
+        AABB[1] = center.y - ey;
+        AABB[2] = center.x + ex;
+        AABB[3] = center.y + ey;
+
+        this.verticesDirty = true;
     }
 
     updateVertices()
@@ -478,7 +466,7 @@ class Rectangle extends Shape
 
     get vertices()
     {
-        if (!this.static && this.verticesDirty)
+        if (this.verticesDirty)
         {
             this.updateVertices();
         }
@@ -520,7 +508,6 @@ class Shape
     constructor(article)
     {
         this.article = article;
-        this.static = true;
     }
 
     update() {}

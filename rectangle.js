@@ -26,7 +26,6 @@ class Rectangle extends Shape
 
     /**
      * @param {object} options
-     * @param {boolean=false} options.static - this object does not need to be updated
      * @param {number=} options.width - width of object when aligned
      * @param {number=} options.height - height of object when aligned
      * @param {object=} options.center - object to use for position (and rotation, unless separately defined)
@@ -34,51 +33,47 @@ class Rectangle extends Shape
      */
     set(options)
     {
-        this.static = options.static;
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
         this.width = options.width || this.article.width;
         this.height = options.height || this.article.height;
         this.hw = this.width / 2;
         this.hh = this.height / 2;
-        this.update(true);
+        this.update();
     }
 
     /**
      * based on http://www.willperone.net/Code/coderr.php
      */
-    update(dirty)
+    update()
     {
-        if (dirty || !this.static)
+        // use PIXI's transform for cos and sin, if available
+        const transform = this.rotation.transform;
+        let s, c;
+        if (transform)
         {
-            // use PIXI's transform for cos and sin, if available
-            const transform = this.rotation.transform;
-            let s, c;
-            if (transform)
-            {
-                s = Math.abs(transform._sr / 2);
-                c = Math.abs(transform._cr / 2);
-            }
-            else
-            {
-                s = Math.abs(Math.sin(this.rotation.rotation) / 2);
-                c = Math.abs(Math.cos(this.rotation.rotation) / 2);
-            }
-
-            const width = this.width;
-            const height = this.height;
-            const ex = height * s + width * c;  // x extent of AABB
-            const ey = height * c + width * s;  // y extent of AABB
-
-            const AABB = this.AABB;
-            const center = this.center;
-            AABB[0] = center.x - ex;
-            AABB[1] = center.y - ey;
-            AABB[2] = center.x + ex;
-            AABB[3] = center.y + ey;
-
-            this.verticesDirty = true;
+            s = Math.abs(transform._sr / 2);
+            c = Math.abs(transform._cr / 2);
         }
+        else
+        {
+            s = Math.abs(Math.sin(this.rotation.rotation) / 2);
+            c = Math.abs(Math.cos(this.rotation.rotation) / 2);
+        }
+
+        const width = this.width;
+        const height = this.height;
+        const ex = height * s + width * c;  // x extent of AABB
+        const ey = height * c + width * s;  // y extent of AABB
+
+        const AABB = this.AABB;
+        const center = this.center;
+        AABB[0] = center.x - ex;
+        AABB[1] = center.y - ey;
+        AABB[2] = center.x + ex;
+        AABB[3] = center.y + ey;
+
+        this.verticesDirty = true;
     }
 
     updateVertices()
@@ -115,7 +110,7 @@ class Rectangle extends Shape
 
     get vertices()
     {
-        if (!this.static && this.verticesDirty)
+        if (this.verticesDirty)
         {
             this.updateVertices();
         }

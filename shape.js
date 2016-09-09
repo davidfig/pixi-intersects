@@ -15,7 +15,6 @@ class Shape
     constructor(article)
     {
         this.article = article;
-        this.static = true;
     }
 
     update() {}
