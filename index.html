@@ -3,20 +3,20 @@
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/ascetic.min.css">
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/highlight.min.js"></script>
 
-    <script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
+    <!--<script src="https://rawgit.com/davidfig/renderer/master/renderer.js"></script>
     <script src="https://rawgit.com/davidfig/debug/master/debug.js"></script>
     <script src="https://rawgit.com/davidfig/update/master/update.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/animate.js"></script>
     <script src="https://rawgit.com/davidfig/animate/master/easing.js"></script>
-    <script src="https://rawgit.com/davidfig/intersects/master/intersects-standalone.js"></script>
+    <script src="https://rawgit.com/davidfig/intersects/master/intersects-standalone.js"></script>-->
 
     <!-- for local testing -->
-    <!--<script src="../renderer/renderer.js"></script>
+    <script src="../renderer/renderer.js"></script>
     <script src="../debug/debug.js"></script>
     <script src="../update/update.js"></script>
     <script src="../animate/animate.js"></script>
     <script src="../animate/easing.js"></script>
-    <script src="../intersects/intersects-standalone.js"></script>-->
+    <script src="../intersects/intersects-standalone.js"></script>
 
     <style>
         body {
@@ -71,6 +71,7 @@
         lineCircle(300, 500);
         circleRectangle(650, 590);
         lineAABB(600, 300);
+        AABBRectangle(100, 590);
 
         // point and AABB
         function pointInAABB(x, y)
@@ -160,7 +161,7 @@
                 {
                     s1.shape.update();
                     s2.shape.update();
-                    s1.children[0].tint = s2.tint = s1.shape.collidesAABB(s2.shape.AABB) ? 0x0000ff : 0x00ff00;
+                    s1.children[0].tint = s2.tint = s1.shape.AABBs(s2.shape.AABB) ? 0x0000ff : 0x00ff00;
                     s1.children[0].tint = s2.tint = s1.shape.collidesRectangle(s2.shape) ? 0xff0000 : s2.tint;
                 }, reverse: true, repeat: true}, Easing.easeInOutSine);
             Animate.to(s2, {x: x - 200, y: y - 25, rotation: Math.PI}, 3000, {repeat: true, reverse: true}, Easing.easeInOutSine);
@@ -238,6 +239,21 @@
                     line(g, p1, p2);
                     s.tint = s.shape.collidesLine(p1, p2) ? 0xff0000 : 0x00ff00;
                 }}, Easing.easeInOutSine);
+        }
+
+        function AABBRectangle(x, y)
+        {
+            var s = square(50, 0x00ff00, x + 150, y);
+            s.shape = new Intersects.Rectangle(s);
+            var s2 = square(65, 0x00ff00, x, y);
+            s.alpha = s2.alpha = 0.5;
+            s2.shape = new Intersects.AABB(s2, {x: x, y: y, center: true, square: 50});
+            Animate.to(s, {x: x - 25, y: y - 25, rotation: Math.PI}, 3000, { reverse: true, repeat: true, onEach:
+                function()
+                {
+                    s.shape.update();
+                    s.tint = s2.tint = s2.shape.collides(s.shape) ? 0xff0000 : 0x00ff00;
+                }}, Easing.easeInOutQuad);
         }
 
         // initialize renderer and update loop for animation (see github.com/davidfig/renderer/, github.com/davidfig/update, and github.com/davidfig/animate)
