@@ -129,7 +129,7 @@ class Rectangle extends Shape
 
     collidesAABB(AABB)
     {
-        return this.collidesPolygon(AABB, true);
+        return this.collidesPolygon(AABB);
     }
 }
 
