@@ -391,11 +391,31 @@ class Rectangle extends Shape
     {
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
-        this.width = options.width || this.article.width;
-        this.height = options.height || this.article.height;
-        this.hw = this.width / 2;
-        this.hh = this.height / 2;
+        this._width = options.width || this.article.width;
+        this._height = options.height || this.article.height;
+        this.hw = this._width / 2;
+        this.hh = this._height / 2;
         this.update();
+    }
+
+    get width()
+    {
+        return this._width;
+    }
+    set width(value)
+    {
+        this._width = value;
+        this.hw = value / 2;
+    }
+
+    get height()
+    {
+        return this._height;
+    }
+    set height(value)
+    {
+        this._height = value;
+        this.hh = value / 2;
     }
 
     /**
