@@ -111,7 +111,7 @@ class AABB extends Shape
 
     collidesAABB(AABB)
     {
-        return this.AABBCollidesAABB(AABB);
+        return this.AABBs(AABB);
     }
 
     collidesPoint(point)

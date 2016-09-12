@@ -112,7 +112,7 @@ class AABB extends Shape
 
     collidesAABB(AABB)
     {
-        return this.AABBCollidesAABB(AABB);
+        return this.AABBs(AABB);
     }
 
     collidesPoint(point)
@@ -437,8 +437,8 @@ class Rectangle extends Shape
             c = Math.abs(Math.cos(this.rotation.rotation) / 2);
         }
 
-        const width = this.width;
-        const height = this.height;
+        const width = this._width;
+        const height = this._height;
         const ex = height * s + width * c;  // x extent of AABB
         const ey = height * c + width * s;  // y extent of AABB
 
