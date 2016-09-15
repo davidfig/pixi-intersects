@@ -4,7 +4,7 @@
   "description": "shape collision / intersects library for pixi.js",
   "main": "intersects.js",
   "scripts": {
-    "install": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
