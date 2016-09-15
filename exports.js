@@ -10,7 +10,6 @@
 const Intersects = window.Intersects || {};
 
 Intersects.Shape = require('./shape.js');
-Intersects.AABB = require('./AABB.js');
 Intersects.Rectangle = require('./rectangle.js');
 Intersects.Polygon = require('./polygon.js');
 Intersects.Circle = require('./circle.js');
