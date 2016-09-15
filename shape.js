@@ -59,11 +59,6 @@ class Shape
         debug('TODO: ' + this.SHAPE + ' collides Rectangle.');
     }
 
-    collidesAABB()
-    {
-        debug('TODO: ' + this.SHAPE + ' collides AABB.');
-    }
-
     /**
      * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
      */
@@ -135,11 +130,6 @@ class Shape
                 return true;
             }
         }
-        return false;
-    }
-
-    checkLast()
-    {
         return false;
     }
 

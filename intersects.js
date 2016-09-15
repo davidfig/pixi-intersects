@@ -8,7 +8,6 @@
 
 module.exports = {
     Shape: require('./shape.js'),
-    AABB: require('./AABB.js'),
     Rectangle: require('./rectangle.js'),
     Polygon: require('./polygon.js'),
     Circle: require('./circle.js')

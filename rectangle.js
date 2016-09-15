@@ -28,15 +28,25 @@ class Rectangle extends Shape
      * @param {object} options
      * @param {number=} options.width - width of object when aligned
      * @param {number=} options.height - height of object when aligned
+     * @param {number=} options.square - side size of a square
      * @param {object=} options.center - object to use for position (and rotation, unless separately defined)
      * @param {object=} options.rotation - object to use for rotation instead of options.center or article
+     * @param {boolean} options.noRotate - object does not rotate (simplifies math)
      */
     set(options)
     {
         this.center = options.center || this.article;
         this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
-        this._width = options.width || this.article.width;
-        this._height = options.height || this.article.height;
+        if (typeof options.square !== 'undefined')
+        {
+            this._width = this._height = options.square;
+        }
+        else
+        {
+            this._width = options.width || this.article.width;
+            this._height = options.height || this.article.height;
+        }
+        this.noRotate = options.noRotate;
         this.hw = this._width / 2;
         this.hh = this._height / 2;
         this.update();
@@ -67,64 +77,90 @@ class Rectangle extends Shape
      */
     update()
     {
-        // use PIXI's transform for cos and sin, if available
-        const transform = this.rotation.transform;
-        let s, c;
-        if (transform)
+        const AABB = this.AABB;
+        const center = this.center;
+
+        if (this.noRotate)
         {
-            s = Math.abs(transform._sr / 2);
-            c = Math.abs(transform._cr / 2);
+            const hw = this.hw;
+            const hh = this.hh;
+            AABB[0] = center.x - hw;
+            AABB[1] = center.y - hh;
+            AABB[2] = center.x + hw;
+            AABB[3] = center.y + hh;
         }
         else
         {
-            s = Math.abs(Math.sin(this.rotation.rotation) / 2);
-            c = Math.abs(Math.cos(this.rotation.rotation) / 2);
+            // use PIXI's transform for cos and sin, if available
+            const transform = this.rotation.transform;
+            let s, c;
+            if (transform)
+            {
+                s = Math.abs(transform._sr / 2);
+                c = Math.abs(transform._cr / 2);
+            }
+            else
+            {
+                s = Math.abs(Math.sin(this.rotation.rotation) / 2);
+                c = Math.abs(Math.cos(this.rotation.rotation) / 2);
+            }
+
+            const width = this._width;
+            const height = this._height;
+            const ex = height * s + width * c;  // x extent of AABB
+            const ey = height * c + width * s;  // y extent of AABB
+
+            AABB[0] = center.x - ex;
+            AABB[1] = center.y - ey;
+            AABB[2] = center.x + ex;
+            AABB[3] = center.y + ey;
         }
-
-        const width = this._width;
-        const height = this._height;
-        const ex = height * s + width * c;  // x extent of AABB
-        const ey = height * c + width * s;  // y extent of AABB
-
-        const AABB = this.AABB;
-        const center = this.center;
-        AABB[0] = center.x - ex;
-        AABB[1] = center.y - ey;
-        AABB[2] = center.x + ex;
-        AABB[3] = center.y + ey;
-
         this.verticesDirty = true;
     }
 
     updateVertices()
     {
-        function xCalc(x, y)
-        {
-            return center.x + x * cos - y * sin;
-        }
-
-        function yCalc(x, y)
-        {
-            return center.y + x * sin + y * cos;
-        }
-
         const vertices = this._vertices;
         const center = this.center;
-        const transform = this.rotation.transform;
-        const sin = transform._sr;
-        const cos = transform._cr;
         const hw = this.hw;
         const hh = this.hh;
+        if (this.noRotate)
+        {
+            const AABB = this.AABB;
+            vertices[0] = AABB[0];
+            vertices[1] = AABB[1];
+            vertices[2] = AABB[2];
+            vertices[3] = AABB[1];
+            vertices[4] = AABB[2];
+            vertices[5] = AABB[3];
+            vertices[6] = AABB[0];
+            vertices[7] = AABB[3];
+        }
+        else
+        {
+            function xCalc(x, y)
+            {
+                return center.x + x * cos - y * sin;
+            }
 
-        vertices[0] = xCalc(-hw, -hh);
-        vertices[1] = yCalc(-hw, -hh);
-        vertices[2] = xCalc(+hw, -hh);
-        vertices[3] = yCalc(+hw, -hh);
-        vertices[4] = xCalc(+hw, +hh);
-        vertices[5] = yCalc(+hw, +hh);
-        vertices[6] = xCalc(-hw, +hh);
-        vertices[7] = yCalc(-hw, +hh);
+            function yCalc(x, y)
+            {
+                return center.y + x * sin + y * cos;
+            }
 
+            const transform = this.rotation.transform;
+            const sin = transform._sr;
+            const cos = transform._cr;
+
+            vertices[0] = xCalc(-hw, -hh);
+            vertices[1] = yCalc(-hw, -hh);
+            vertices[2] = xCalc(+hw, -hh);
+            vertices[3] = yCalc(+hw, -hh);
+            vertices[4] = xCalc(+hw, +hh);
+            vertices[5] = yCalc(+hw, +hh);
+            vertices[6] = xCalc(-hw, +hh);
+            vertices[7] = yCalc(-hw, +hh);
+        }
         this.verticesDirty = false;
     }
 
@@ -139,17 +175,19 @@ class Rectangle extends Shape
 
     collidesRectangle(rectangle)
     {
-        return this.collidesPolygon(rectangle);
+        if (this.noRotate && rectangle.noRotate)
+        {
+            return this.AABBs(rectangle.AABB);
+        }
+        else
+        {
+            return this.collidesPolygon(rectangle);
+        }
     }
 
     collidesCircle(circle)
     {
         return circle.collidesRectangle(this);
-    }
-
-    collidesAABB(AABB)
-    {
-        return this.collidesPolygon(AABB);
     }
 }
 

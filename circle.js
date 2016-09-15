@@ -89,49 +89,49 @@ class Circle extends Shape
         return h2 <= this.radiusSquared;
     }
 
-    /**
-     * from http://stackoverflow.com/a/402019/1955997
-     */
     collidesRectangle(rectangle)
     {
-        const center = this.center;
-        if (rectangle.collidesPoint(center))
+        // from http://stackoverflow.com/a/402010/1955997
+        if (rectangle.noRotate)
         {
-            return true;
+            const AABB = rectangle.AABB;
+            const hw = (AABB[2] - AABB[0]) / 2;
+            const hh = (AABB[3] - AABB[1]) / 2;
+            const center = this.center;
+            const radius = this.radius;
+            const distX = Math.abs(center.x - AABB[0]);
+            const distY = Math.abs(center.y - AABB[1]);
+
+            if (distX > hw + radius || distY > hh + radius)
+            {
+                return false;
+            }
+
+            if (distX <= hw || distY <= hh)
+            {
+                return true;
+            }
+
+            const x = distX - hw;
+            const y = distY - hh;
+            return x * x + y * y <= this.radiusSquared;
         }
 
-        const vertices = rectangle.vertices;
-        return this.collidesLine({x: vertices[0], y: vertices[1]}, {x: vertices[2], y: vertices[3]}) ||
-            this.collidesLine({x: vertices[2], y: vertices[3]}, {x: vertices[4], y: vertices[5]}) ||
-            this.collidesLine({x: vertices[4], y: vertices[5]}, {x: vertices[6], y: vertices[7]}) ||
-            this.collidesLine({x: vertices[6], y: vertices[7]}, {x: vertices[0], y: vertices[1]});
-    }
-
-    /**
-     * from http://stackoverflow.com/a/402010/1955997
-     */
-    collidesAABB(AABB)
-    {
-        const hw = (AABB[2] - AABB[0]) / 2;
-        const hh = (AABB[3] - AABB[1]) / 2;
-        const center = this.center;
-        const radius = this.radius;
-        const distX = Math.abs(center.x - AABB[0]);
-        const distY = Math.abs(center.y - AABB[1]);
-
-        if (distX > hw + radius || distY > hh + radius)
+        // from http://stackoverflow.com/a/402019/1955997
+        else
         {
-            return false;
-        }
+            const center = this.center;
+            if (rectangle.collidesPoint(center))
+            {
+                return true;
+            }
 
-        if (distX <= hw || distY <= hh)
-        {
-            return true;
+            const vertices = rectangle.vertices;
+            return this.collidesLine({x: vertices[0], y: vertices[1]}, {x: vertices[2], y: vertices[3]}) ||
+                this.collidesLine({x: vertices[2], y: vertices[3]}, {x: vertices[4], y: vertices[5]}) ||
+                this.collidesLine({x: vertices[4], y: vertices[5]}, {x: vertices[6], y: vertices[7]}) ||
+                this.collidesLine({x: vertices[6], y: vertices[7]}, {x: vertices[0], y: vertices[1]});
         }
-
-        const x = distX - hw;
-        const y = distY - hh;
-        return x * x + y * y <= this.radiusSquared;
     }
 }
 
