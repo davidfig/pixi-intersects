@@ -1,18 +1,19 @@
 /**
- * @license
- * intersects <https://github.com/davidfig/intersects>
- * Released under MIT license <https://github.com/davidfig/intersects/license>
- * Author David Figatner
+ * @file src/polygon.js
+ * @author David Figatner
+ * @license MIT
  * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
  */
 
 const Shape = require('./shape.js');
 
+/** Polygon */
 class Polygon extends Shape
 {
     /**
      * @param {Article} article that uses this shape
-     * @param {object} options - see set()
+     * @param {object} [options] @see {@link Polygon.set}
      */
     constructor(article, options)
     {
@@ -25,8 +26,8 @@ class Polygon extends Shape
     /**
      * @param {object} options
      * @param {PIXI.Point[]} options.points
-     * @param {PIXI.DisplayObject=} options.center - object to use for position (and rotation, unless separately defined)
-     * @param {PIXI.DisplayObject=} options.rotation - object to use for rotation instead of options.center or article
+     * @param {PIXI.DisplayObject} [options.center] - object to use for position (and rotation, unless separately defined)
+     * @param {PIXI.DisplayObject} [options.rotation] - object to use for rotation instead of options.center or article
      */
     set(options)
     {

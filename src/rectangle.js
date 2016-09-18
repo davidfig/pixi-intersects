@@ -1,9 +1,9 @@
 /**
- * @license
- * intersects <https://github.com/davidfig/intersects>
- * Released under MIT license <https://github.com/davidfig/intersects/license>
- * Author David Figatner
+ * @file src/rectangle.js
+ * @author David Figatner
+ * @license MIT
  * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
  */
 
 const Shape = require('./shape.js');
@@ -12,7 +12,7 @@ class Rectangle extends Shape
 {
     /**
      * @param {object} article that uses this shape
-     * @param {object} options - see set()
+     * @param {object} [options] @see {@link Rectangle.set}
      */
     constructor(article, options)
     {
@@ -26,12 +26,12 @@ class Rectangle extends Shape
 
     /**
      * @param {object} options
-     * @param {number=} options.width - width of object when aligned
-     * @param {number=} options.height - height of object when aligned
-     * @param {number=} options.square - side size of a square
-     * @param {object=} options.center - object to use for position (and rotation, unless separately defined)
-     * @param {object=} options.rotation - object to use for rotation instead of options.center or article
-     * @param {boolean} options.noRotate - object does not rotate (simplifies math)
+     * @param {number} [options.width] width of object when aligned
+     * @param {number} [options.height] height of object when aligned
+     * @param {number} [options.square] side size of a square
+     * @param {object} [options.center] object to use for position (and rotation, unless separately defined)
+     * @param {object} [options.rotation] object to use for rotation instead of options.center or article
+     * @param {boolean} [options.noRotate] object does not rotate (simplifies math)
      */
     set(options)
     {
@@ -52,6 +52,7 @@ class Rectangle extends Shape
         this.update();
     }
 
+    /** width of rectangle */
     get width()
     {
         return this._width;
@@ -62,6 +63,7 @@ class Rectangle extends Shape
         this.hw = value / 2;
     }
 
+    /** height of rectangle */
     get height()
     {
         return this._height;
@@ -74,6 +76,7 @@ class Rectangle extends Shape
 
     /**
      * based on http://www.willperone.net/Code/coderr.php
+     * update AABB and sets vertices to dirty
      */
     update()
     {
@@ -118,6 +121,7 @@ class Rectangle extends Shape
         this.verticesDirty = true;
     }
 
+    /** updates vertices automatically when dirty */
     updateVertices()
     {
         const vertices = this._vertices;
@@ -164,6 +168,7 @@ class Rectangle extends Shape
         this.verticesDirty = false;
     }
 
+    /** sets vertices Array[8] */
     get vertices()
     {
         if (this.verticesDirty)
@@ -173,6 +178,11 @@ class Rectangle extends Shape
         return this._vertices;
     }
 
+    /**
+     * Does Rectangle collide Rectangle?
+     * @param {Rectangle} rectangle
+     * @return {boolean}
+     */
     collidesRectangle(rectangle)
     {
         if (this.noRotate && rectangle.noRotate)
@@ -185,6 +195,11 @@ class Rectangle extends Shape
         }
     }
 
+    /**
+     * Does Rectangle collide Circle?
+     * @param {Circle} circle
+     * @return {boolean}
+     */
     collidesCircle(circle)
     {
         return circle.collidesRectangle(this);

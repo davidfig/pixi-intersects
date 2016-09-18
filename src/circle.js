@@ -1,18 +1,19 @@
 /**
- * @license
- * intersects <https://github.com/davidfig/intersects>
- * Released under MIT license <https://github.com/davidfig/intersects/license>
- * Author David Figatner
+ * @file src/circle.js
+ * @author David Figatner
+ * @license MIT
  * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
  */
 
 const Shape = require('./shape.js');
 
+/** circle shape */
 class Circle extends Shape
 {
     /**
      * @param {Article} article that uses this shape
-     * @param {object=} options - see set()
+     * @param {object} [options] - @see {@link Circle.set}
      */
     constructor(article, options)
     {
@@ -25,9 +26,9 @@ class Circle extends Shape
 
     /**
      * @param {object} options
-     * @param {object=this.article} options.positionObject - use this to update position (and rotation unless rotationObject is defined)
-     * @param {object=this.article} options.rotationObject - use this to update rotation
-     * @param {number=} options.radius - otherwise article.width / 2 is used as radius
+     * @param {object} [options.positionObject=this.article] use this to update position (and rotation unless rotationObject is defined)
+     * @param {object} [options.rotationObject=this.article] use this to update rotation
+     * @param {number} [options.radius] otherwise article.width / 2 is used as radius
      */
     set(options)
     {
@@ -38,6 +39,7 @@ class Circle extends Shape
         this.update();
     }
 
+    /** update AABB */
     update()
     {
         const AABB = this.AABB;
@@ -49,6 +51,11 @@ class Circle extends Shape
         AABB[3] = center.y + radius;
     }
 
+    /**
+     * Does Circle collide with Circle?
+     * @param {Circle} circle
+     * @return {boolean}
+     */
     collidesCircle(circle)
     {
         const thisCenter = this.center;
@@ -59,6 +66,11 @@ class Circle extends Shape
         return x * x + y * y <= radii * radii;
     }
 
+    /**
+     * Does Circle collide with point?
+     * @param {Point} point
+     * @return {boolean}
+     */
     collidesPoint(point)
     {
         const x = point.x - this.center.x;
@@ -67,7 +79,11 @@ class Circle extends Shape
     }
 
     /**
+     * Does Circle collide with a line?
      * from http://stackoverflow.com/a/10392860/1955997
+     * @param {Point} p1
+     * @param {Point} p2
+     * @return {boolean}
      */
     collidesLine(p1, p2)
     {
@@ -89,6 +105,10 @@ class Circle extends Shape
         return h2 <= this.radiusSquared;
     }
 
+    /**
+     * Does circle collide with Rectangle?
+     * @param {Rectangle} rectangle
+     */
     collidesRectangle(rectangle)
     {
         // from http://stackoverflow.com/a/402010/1955997

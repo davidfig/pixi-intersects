@@ -1,16 +1,16 @@
 /**
- * @license
- * intersects <https://github.com/davidfig/intersects>
- * Released under MIT license <https://github.com/davidfig/intersects/license>
- * Author David Figatner
+ * @file src/shape.js
+ * @author David Figatner
+ * @license MIT
  * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
  */
 
-/* global debug */
+/** base class of all shapes */
 class Shape
 {
     /**
-     * @param {object=} article that uses this shape
+     * @param {object} [article] that uses this shape
      */
     constructor(article)
     {
@@ -32,6 +32,8 @@ class Shape
     /**
      * point-polygon collision test based on this.vertices
      * based on http://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon/2922778#2922778
+     * @param {Point} point
+     * @return {boolean}
      */
     collidesPoint(point)
     {
@@ -49,18 +51,15 @@ class Shape
         return c;
     }
 
-    collidesCircle()
-    {
-        debug('TODO: ' + this.SHAPE + ' collides Circle.');
-    }
-
-    collidesRectangle()
-    {
-        debug('TODO: ' + this.SHAPE + ' collides Rectangle.');
-    }
+    collidesCircle() {}
+    collidesRectangle() {}
 
     /**
+     * Does Polygon collide Polygon or AABB?
      * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
+     * @param {Array} polygon
+     * @param {boolean} isAABB
+     * @return {boolean}
      */
     collidesPolygon(polygon, isAABB)
     {
@@ -110,6 +109,12 @@ class Shape
         return true;
     }
 
+    /**
+     * Does polygon collide Line?
+     * @param {Point} p1
+     * @param {Point} p2
+     * @return {boolean}
+     */
     collidesLine(p1, p2)
     {
         const vertices = this.vertices;
@@ -133,13 +138,20 @@ class Shape
         return false;
     }
 
+    /** catch all for automatic collision checking */
     collides(shape)
     {
         return this['collides' + shape.SHAPE](shape);
     }
 
     /**
+     * Do two lines intersect?
      * from http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+     * @param {Point} p1
+     * @param {Point} p2
+     * @param {Point} p3
+     * @param {Point} p4
+     * @return {boolean}
      */
     static lineLine(p1, p2, p3, p4)
     {

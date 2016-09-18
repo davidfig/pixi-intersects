@@ -1,10 +1,11 @@
 {
-  "name": "@yy/intersects",
+  "name": "yy-intersects",
   "version": "1.0.0",
   "description": "shape collision / intersects library for pixi.js",
   "main": "intersects.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docs": "node_modules/.bin/jsdoc2md --template README.hbs *.js src/*.js > README.md"
   },
   "repository": {
     "type": "git",
@@ -15,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/davidfig/intersects/issues"
   },
-  "homepage": "https://github.com/davidfig/intersects#readme"
+  "homepage": "https://github.com/davidfig/intersects#readme",
+  "devDependencies": {
+    "jsdoc-to-markdown": "^1.3.7"
+  }
 }

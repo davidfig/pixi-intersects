@@ -1,0 +1,31 @@
+## intersects
+shape collision / intersects library for pixi.js
+
+## rationale
+this is a simple libary that i designed for use with my game engine. most of the better collision libraries were too large or too heavily invested in physics. i wanted something simple that worked well with pixi.js.
+
+## Code Example
+
+    // point-Rectangle intersection
+
+    var sprite = new PIXI.Sprite(texture);
+    sprite.shape = new Intersects.Rectangle(sprite);
+    sprite.position.set(5, 5);
+    if (sprite.shape.collidesPoint(new PIXI.Point(10, 10)))
+    {
+        console.log('intersected');
+    }
+
+## Live Example
+https://davidfig.github.io/intersects/
+
+## Installation
+
+    npm i yy-intersects
+
+# API Reference
+{{>main}}
+
+* * *
+
+Copyright (c) 2016 YOPEY YOPEY LLC - MIT License - Documented by [jsdoc-to-markdown](https://github.com/75lb/jsdoc-to-markdown)

@@ -1,14 +1,14 @@
 /**
- * @license
- * intersects <https://github.com/davidfig/intersects>
- * Released under MIT license <https://github.com/davidfig/intersects/license>
- * Author David Figatner
+ * @file intersects.js
+ * @author David Figatner
+ * @license MIT
  * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
  */
 
 module.exports = {
-    Shape: require('./shape.js'),
-    Rectangle: require('./rectangle.js'),
-    Polygon: require('./polygon.js'),
-    Circle: require('./circle.js')
+    Shape: require('./src/shape.js'),
+    Rectangle: require('./src/rectangle.js'),
+    // Polygon: require('./src/polygon.js'),
+    Circle: require('./src/circle.js')
 };
