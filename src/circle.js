@@ -26,8 +26,7 @@ class Circle extends Shape
 
     /**
      * @param {object} options
-     * @param {object} [options.positionObject=this.article] use this to update position (and rotation unless rotationObject is defined)
-     * @param {object} [options.rotationObject=this.article] use this to update rotation
+     * @param {object} [options.positionObject=this.article] use this to update position
      * @param {number} [options.radius] otherwise article.width / 2 is used as radius
      */
     set(options)
@@ -35,7 +34,6 @@ class Circle extends Shape
         this.radius = options.radius || this.article.width / 2;
         this.radiusSquared = this.radius * this.radius;
         this.center = options.positionObject ? options.positionObject : this.article;
-        this.rotation = options.rotationObject ? options.rotationObject : (options.positionObject ? options.positionObject : this.article);
         this.update();
     }
 
