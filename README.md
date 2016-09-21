@@ -70,8 +70,7 @@ circle shape
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | options | <code>object</code> |  |  |
-| [options.positionObject] | <code>object</code> | <code>this.article</code> | use this to update position (and rotation unless rotationObject is defined) |
-| [options.rotationObject] | <code>object</code> | <code>this.article</code> | use this to update rotation |
+| [options.positionObject] | <code>object</code> | <code>this.article</code> | use this to update position |
 | [options.radius] | <code>number</code> |  | otherwise article.width / 2 is used as radius |
 
 <a name="Circle+update"></a>
