@@ -142,28 +142,18 @@ class Rectangle extends Shape
         }
         else
         {
-            function xCalc(x, y)
-            {
-                return center.x + x * cos - y * sin;
-            }
-
-            function yCalc(x, y)
-            {
-                return center.y + x * sin + y * cos;
-            }
-
             const transform = this.rotation.transform;
             const sin = transform._sr;
             const cos = transform._cr;
 
-            vertices[0] = xCalc(-hw, -hh);
-            vertices[1] = yCalc(-hw, -hh);
-            vertices[2] = xCalc(+hw, -hh);
-            vertices[3] = yCalc(+hw, -hh);
-            vertices[4] = xCalc(+hw, +hh);
-            vertices[5] = yCalc(+hw, +hh);
-            vertices[6] = xCalc(-hw, +hh);
-            vertices[7] = yCalc(-hw, +hh);
+            vertices[0] = center.x - hw * cos + hh * sin;
+            vertices[1] = center.y - hw * sin - hh * cos;
+            vertices[2] = center.x + hw * cos + hh * sin;
+            vertices[3] = center.y + hw * sin - hh * cos;
+            vertices[4] = center.x + hw * cos - hh * sin;
+            vertices[5] = center.y + hw * sin + hh * cos;
+            vertices[6] = center.x - hw * cos - hh * sin;
+            vertices[7] = center.y - hw * sin + hh * cos;
         }
         this.verticesDirty = false;
     }
