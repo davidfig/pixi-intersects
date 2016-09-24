@@ -1,4 +1,553 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/**
+ * @file intersects.js
+ * @author David Figatner
+ * @license MIT
+ * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
+ */
+
+module.exports = {
+    Shape: require('./src/shape.js'),
+    Rectangle: require('./src/rectangle.js'),
+    // Polygon: require('./src/polygon.js'),
+    Circle: require('./src/circle.js')
+};
+},{"./src/circle.js":2,"./src/rectangle.js":3,"./src/shape.js":4}],2:[function(require,module,exports){
+/**
+ * @file src/circle.js
+ * @author David Figatner
+ * @license MIT
+ * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
+ */
+
+const Shape = require('./shape.js');
+
+/** circle shape */
+class Circle extends Shape
+{
+    /**
+     * @param {Article} article that uses this shape
+     * @param {object} [options] - @see {@link Circle.set}
+     */
+    constructor(article, options)
+    {
+        super(article);
+        this.SHAPE = 'Circle';
+        this.AABB = [];
+        options = options || {};
+        this.set(options);
+    }
+
+    /**
+     * @param {object} options
+     * @param {object} [options.positionObject=this.article] use this to update position
+     * @param {number} [options.radius] otherwise article.width / 2 is used as radius
+     */
+    set(options)
+    {
+        this.radius = options.radius || this.article.width / 2;
+        this.radiusSquared = this.radius * this.radius;
+        this.center = options.positionObject ? options.positionObject : this.article;
+        this.update();
+    }
+
+    /** update AABB */
+    update()
+    {
+        const AABB = this.AABB;
+        const radius = this.radius;
+        const center = this.center;
+        AABB[0] = center.x - radius;
+        AABB[1] = center.y - radius;
+        AABB[2] = center.x + radius;
+        AABB[3] = center.y + radius;
+    }
+
+    /**
+     * Does Circle collide with Circle?
+     * @param {Circle} circle
+     * @return {boolean}
+     */
+    collidesCircle(circle)
+    {
+        const thisCenter = this.center;
+        const center = circle.center;
+        const x = center.x - thisCenter.x;
+        const y = center.y - thisCenter.y;
+        const radii = circle.radius + this.radius;
+        return x * x + y * y <= radii * radii;
+    }
+
+    /**
+     * Does Circle collide with point?
+     * @param {Point} point
+     * @return {boolean}
+     */
+    collidesPoint(point)
+    {
+        const x = point.x - this.center.x;
+        const y = point.y - this.center.y;
+        return x * x + y * y <= this.radiusSquared;
+    }
+
+    /**
+     * Does Circle collide with a line?
+     * from http://stackoverflow.com/a/10392860/1955997
+     * @param {Point} p1
+     * @param {Point} p2
+     * @return {boolean}
+     */
+    collidesLine(p1, p2)
+    {
+        function dot(v1, v2)
+        {
+            return (v1[0] * v2[0]) + (v1[1] * v2[1]);
+        }
+
+        const center = this.center;
+        const ac = [center.x - p1.x, center.y - p1.y];
+        const ab = [p2.x - p1.x, p2.y - p1.y];
+        const ab2 = dot(ab, ab);
+        const acab = dot(ac, ab);
+        let t = acab / ab2;
+        t = (t < 0) ? 0 : t;
+        t = (t > 1) ? 1 : t;
+        let h = [(ab[0] * t + p1.x) - center.x, (ab[1] * t + p1.y) - center.y];
+        const h2 = dot(h, h);
+        return h2 <= this.radiusSquared;
+    }
+
+    /**
+     * Does circle collide with Rectangle?
+     * @param {Rectangle} rectangle
+     */
+    collidesRectangle(rectangle)
+    {
+        // from http://stackoverflow.com/a/402010/1955997
+        if (rectangle.noRotate)
+        {
+            const AABB = rectangle.AABB;
+            const hw = (AABB[2] - AABB[0]) / 2;
+            const hh = (AABB[3] - AABB[1]) / 2;
+            const center = this.center;
+            const radius = this.radius;
+            const distX = Math.abs(center.x - AABB[0]);
+            const distY = Math.abs(center.y - AABB[1]);
+
+            if (distX > hw + radius || distY > hh + radius)
+            {
+                return false;
+            }
+
+            if (distX <= hw || distY <= hh)
+            {
+                return true;
+            }
+
+            const x = distX - hw;
+            const y = distY - hh;
+            return x * x + y * y <= this.radiusSquared;
+        }
+
+        // from http://stackoverflow.com/a/402019/1955997
+        else
+        {
+            const center = this.center;
+            if (rectangle.collidesPoint(center))
+            {
+                return true;
+            }
+
+            const vertices = rectangle.vertices;
+            return this.collidesLine({x: vertices[0], y: vertices[1]}, {x: vertices[2], y: vertices[3]}) ||
+                this.collidesLine({x: vertices[2], y: vertices[3]}, {x: vertices[4], y: vertices[5]}) ||
+                this.collidesLine({x: vertices[4], y: vertices[5]}, {x: vertices[6], y: vertices[7]}) ||
+                this.collidesLine({x: vertices[6], y: vertices[7]}, {x: vertices[0], y: vertices[1]});
+        }
+    }
+}
+
+module.exports = Circle;
+},{"./shape.js":4}],3:[function(require,module,exports){
+/**
+ * @file src/rectangle.js
+ * @author David Figatner
+ * @license MIT
+ * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
+ */
+
+const Shape = require('./shape.js');
+
+class Rectangle extends Shape
+{
+    /**
+     * @param {object} article that uses this shape
+     * @param {object} [options] @see {@link Rectangle.set}
+     */
+    constructor(article, options)
+    {
+        super(article);
+        this.SHAPE = 'Rectangle';
+        options = options || {};
+        this._vertices = [];
+        this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
+        this.set(options);
+    }
+
+    /**
+     * @param {object} options
+     * @param {number} [options.width] width of object when aligned
+     * @param {number} [options.height] height of object when aligned
+     * @param {number} [options.square] side size of a square
+     * @param {object} [options.center] object to use for position (and rotation, unless separately defined)
+     * @param {object} [options.rotation] object to use for rotation instead of options.center or article
+     * @param {boolean} [options.noRotate] object does not rotate (simplifies math)
+     */
+    set(options)
+    {
+        this.center = options.center || this.article;
+        this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
+        if (typeof options.square !== 'undefined')
+        {
+            this._width = this._height = options.square;
+        }
+        else
+        {
+            this._width = options.width || this.article.width;
+            this._height = options.height || this.article.height;
+        }
+        this.noRotate = options.noRotate;
+        this.hw = this._width / 2;
+        this.hh = this._height / 2;
+        this.update();
+    }
+
+    /** width of rectangle */
+    get width()
+    {
+        return this._width;
+    }
+    set width(value)
+    {
+        this._width = value;
+        this.hw = value / 2;
+    }
+
+    /** height of rectangle */
+    get height()
+    {
+        return this._height;
+    }
+    set height(value)
+    {
+        this._height = value;
+        this.hh = value / 2;
+    }
+
+    /**
+     * based on http://www.willperone.net/Code/coderr.php
+     * update AABB and sets vertices to dirty
+     */
+    update()
+    {
+        const AABB = this.AABB;
+        const center = this.center;
+
+        if (this.noRotate)
+        {
+            const hw = this.hw;
+            const hh = this.hh;
+            AABB[0] = center.x - hw;
+            AABB[1] = center.y - hh;
+            AABB[2] = center.x + hw;
+            AABB[3] = center.y + hh;
+        }
+        else
+        {
+            // use PIXI's transform for cos and sin, if available
+            const transform = this.rotation.transform;
+            let s, c;
+            if (transform)
+            {
+                s = Math.abs(transform._sr / 2);
+                c = Math.abs(transform._cr / 2);
+            }
+            else
+            {
+                s = Math.abs(Math.sin(this.rotation.rotation) / 2);
+                c = Math.abs(Math.cos(this.rotation.rotation) / 2);
+            }
+
+            const width = this._width;
+            const height = this._height;
+            const ex = height * s + width * c;  // x extent of AABB
+            const ey = height * c + width * s;  // y extent of AABB
+
+            AABB[0] = center.x - ex;
+            AABB[1] = center.y - ey;
+            AABB[2] = center.x + ex;
+            AABB[3] = center.y + ey;
+        }
+        this.verticesDirty = true;
+    }
+
+    /** updates vertices automatically when dirty */
+    updateVertices()
+    {
+        const vertices = this._vertices;
+        const center = this.center;
+        const hw = this.hw;
+        const hh = this.hh;
+        if (this.noRotate)
+        {
+            const AABB = this.AABB;
+            vertices[0] = AABB[0];
+            vertices[1] = AABB[1];
+            vertices[2] = AABB[2];
+            vertices[3] = AABB[1];
+            vertices[4] = AABB[2];
+            vertices[5] = AABB[3];
+            vertices[6] = AABB[0];
+            vertices[7] = AABB[3];
+        }
+        else
+        {
+            const transform = this.rotation.transform;
+            const sin = transform._sr;
+            const cos = transform._cr;
+
+            vertices[0] = center.x - hw * cos + hh * sin;
+            vertices[1] = center.y - hw * sin - hh * cos;
+            vertices[2] = center.x + hw * cos + hh * sin;
+            vertices[3] = center.y + hw * sin - hh * cos;
+            vertices[4] = center.x + hw * cos - hh * sin;
+            vertices[5] = center.y + hw * sin + hh * cos;
+            vertices[6] = center.x - hw * cos - hh * sin;
+            vertices[7] = center.y - hw * sin + hh * cos;
+        }
+        this.verticesDirty = false;
+    }
+
+    /** sets vertices Array[8] */
+    get vertices()
+    {
+        if (this.verticesDirty)
+        {
+            this.updateVertices();
+        }
+        return this._vertices;
+    }
+
+    /**
+     * Does Rectangle collide Rectangle?
+     * @param {Rectangle} rectangle
+     * @return {boolean}
+     */
+    collidesRectangle(rectangle)
+    {
+        if (this.noRotate && rectangle.noRotate)
+        {
+            return this.AABBs(rectangle.AABB);
+        }
+        else
+        {
+            return this.collidesPolygon(rectangle);
+        }
+    }
+
+    /**
+     * Does Rectangle collide Circle?
+     * @param {Circle} circle
+     * @return {boolean}
+     */
+    collidesCircle(circle)
+    {
+        return circle.collidesRectangle(this);
+    }
+}
+
+module.exports = Rectangle;
+},{"./shape.js":4}],4:[function(require,module,exports){
+/**
+ * @file src/shape.js
+ * @author David Figatner
+ * @license MIT
+ * Copyright (c) 2016 YOPEY YOPEY LLC
+ * {@link https://github.com/davidfig/intersects}
+ */
+
+/** base class of all shapes */
+class Shape
+{
+    /**
+     * @param {object} [article] that uses this shape
+     */
+    constructor(article)
+    {
+        this.article = article;
+    }
+
+    update() {}
+
+    /**
+     * collides with this shape's AABB box
+     * @param {object} AABB
+     */
+    AABBs(AABB)
+    {
+        var AABB2 = this.AABB;
+        return !(AABB[2] < AABB2[0] || AABB2[2] < AABB[0] || AABB[3] < AABB2[1] || AABB2[3] < AABB[1]);
+    }
+
+    /**
+     * point-polygon collision test based on this.vertices
+     * based on http://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon/2922778#2922778
+     * @param {Point} point
+     * @return {boolean}
+     */
+    collidesPoint(point)
+    {
+        const vertices = this.vertices;
+        const length = vertices.length;
+        let c = false;
+        for (let i = 0, j = length - 2; i < length; i += 2)
+        {
+            if (((vertices[i + 1] > point.y) !== (vertices[j + 1] > point.y)) && (point.x < (vertices[j] - vertices[i]) * (point.y - vertices[i + 1]) / (vertices[j + 1] - vertices[i + 1]) + vertices[i]))
+            {
+                c = !c;
+            }
+            j = i;
+        }
+        return c;
+    }
+
+    collidesCircle() {}
+    collidesRectangle() {}
+
+    /**
+     * Does Polygon collide Polygon or AABB?
+     * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
+     * @param {Array} polygon
+     * @param {boolean} isAABB
+     * @return {boolean}
+     */
+    collidesPolygon(polygon, isAABB)
+    {
+        const a = this.vertices;
+        const b = isAABB ? polygon : polygon.vertices;
+        const polygons = [a, b];
+        let minA, maxA, projected, minB, maxB;
+        for (let i = 0; i < polygons.length; i++)
+        {
+            const polygon = polygons[i];
+            for (let i1 = 0; i1 < polygon.length; i1 += 2)
+            {
+                var i2 = (i1 + 2) % polygon.length;
+                var normal = { x: polygon[i2 + 1] - polygon[i1 + 1], y: polygon[i1] - polygon[i2] };
+                minA = maxA = null;
+                for (let j = 0; j < a.length; j += 2)
+                {
+                    projected = normal.x * a[j] + normal.y * a[j + 1];
+                    if (minA === null || projected < minA)
+                    {
+                        minA = projected;
+                    }
+                    if (maxA === null || projected > maxA)
+                    {
+                        maxA = projected;
+                    }
+                }
+                minB = maxB = null;
+                for (let j = 0; j < b.length; j += 2)
+                {
+                    projected = normal.x * b[j] + normal.y * b[j + 1];
+                    if (minB === null || projected < minB)
+                    {
+                        minB = projected;
+                    }
+                    if (maxB === null || projected > maxB)
+                    {
+                        maxB = projected;
+                    }
+                }
+                if (maxA < minB || maxB < minA)
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Does polygon collide Line?
+     * @param {Point} p1
+     * @param {Point} p2
+     * @return {boolean}
+     */
+    collidesLine(p1, p2)
+    {
+        const vertices = this.vertices;
+        const length = vertices.length;
+
+        // check if first point is inside the shape (this covers if the line is completely enclosed by the shape)
+        if (this.collidesPoint(p1))
+        {
+            return true;
+        }
+
+        // check for intersections for all of the sides
+        for (let i = 0; i < length; i += 2)
+        {
+            const j = (i + 2) % length;
+            if (Shape.lineLine(p1, p2, {x: vertices[i], y: vertices[i + 1]}, {x: vertices[j], y: vertices[j + 1]}))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** catch all for automatic collision checking */
+    collides(shape)
+    {
+        return this['collides' + shape.SHAPE](shape);
+    }
+
+    /**
+     * Do two lines intersect?
+     * from http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+     * @param {Point} p1
+     * @param {Point} p2
+     * @param {Point} p3
+     * @param {Point} p4
+     * @return {boolean}
+     */
+    static lineLine(p1, p2, p3, p4)
+    {
+        const p0_x = p1.x;
+        const p0_y = p1.y;
+        const p1_x = p2.x;
+        const p1_y = p2.y;
+        const p2_x = p3.x;
+        const p2_y = p3.y;
+        const p3_x = p4.x;
+        const p3_y = p4.y;
+        const s1_x = p1_x - p0_x;
+        const s1_y = p1_y - p0_y;
+        const s2_x = p3_x - p2_x;
+        const s2_y = p3_y - p2_y;
+        const s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+        const t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+        return s >= 0 && s <= 1 && t >= 0 && t <= 1;
+    }
+}
+
+module.exports = Shape;
+},{}],5:[function(require,module,exports){
 // shows the code in the demo
 window.onload = function()
 {
@@ -15,14 +564,15 @@ window.onload = function()
 
 // for eslint
 /* globals window, XMLHttpRequest, document */
-},{"highlight.js":12}],2:[function(require,module,exports){
+},{"highlight.js":16}],6:[function(require,module,exports){
 const PIXI = require('pixi.js');
 const Easing = require('penner');
 const Debug = require('yy-debug');
 const Renderer = require('yy-renderer');
 const Animate = require('yy-animate');
 const Update = require('yy-update');
-const Intersects = require('yy-intersects');
+// const Intersects = require('yy-intersects');
+const Intersects = require('../intersects/intersects.js');
 
 // initialize
 Debug.init();
@@ -320,7 +870,7 @@ function AABB(shape, clear) // eslint-disable-line no-unused-vars
     aabbG.lineTo(a[0], a[1]);
     aabbG.endFill();
 }
-},{"penner":179,"pixi.js":349,"yy-animate":377,"yy-debug":387,"yy-intersects":388,"yy-renderer":392,"yy-update":393}],3:[function(require,module,exports){
+},{"../intersects/intersects.js":1,"penner":183,"pixi.js":353,"yy-animate":381,"yy-debug":391,"yy-renderer":392,"yy-update":393}],7:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -548,7 +1098,7 @@ var substr = 'ab'.substr(-1) === 'b'
 ;
 
 }).call(this,require('_process'))
-},{"_process":4}],4:[function(require,module,exports){
+},{"_process":8}],8:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -730,7 +1280,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],5:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/punycode v1.4.1 by @mathias */
 ;(function(root) {
@@ -1267,7 +1817,7 @@ process.umask = function() { return 0; };
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],6:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1353,7 +1903,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],7:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1440,13 +1990,13 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],8:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":6,"./encode":7}],9:[function(require,module,exports){
+},{"./decode":10,"./encode":11}],13:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -2180,7 +2730,7 @@ Url.prototype.parseHost = function() {
   if (host) this.hostname = host;
 };
 
-},{"./util":10,"punycode":5,"querystring":8}],10:[function(require,module,exports){
+},{"./util":14,"punycode":9,"querystring":12}],14:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -2198,7 +2748,7 @@ module.exports = {
   }
 };
 
-},{}],11:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 /*
 Syntax highlighting with language autodetection.
 https://highlightjs.org/
@@ -3018,7 +3568,7 @@ https://highlightjs.org/
   return hljs;
 }));
 
-},{}],12:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var hljs = require('./highlight');
 
 hljs.registerLanguage('1c', require('./languages/1c'));
@@ -3189,7 +3739,7 @@ hljs.registerLanguage('xquery', require('./languages/xquery'));
 hljs.registerLanguage('zephir', require('./languages/zephir'));
 
 module.exports = hljs;
-},{"./highlight":11,"./languages/1c":13,"./languages/abnf":14,"./languages/accesslog":15,"./languages/actionscript":16,"./languages/ada":17,"./languages/apache":18,"./languages/applescript":19,"./languages/arduino":20,"./languages/armasm":21,"./languages/asciidoc":22,"./languages/aspectj":23,"./languages/autohotkey":24,"./languages/autoit":25,"./languages/avrasm":26,"./languages/awk":27,"./languages/axapta":28,"./languages/bash":29,"./languages/basic":30,"./languages/bnf":31,"./languages/brainfuck":32,"./languages/cal":33,"./languages/capnproto":34,"./languages/ceylon":35,"./languages/clojure":37,"./languages/clojure-repl":36,"./languages/cmake":38,"./languages/coffeescript":39,"./languages/coq":40,"./languages/cos":41,"./languages/cpp":42,"./languages/crmsh":43,"./languages/crystal":44,"./languages/cs":45,"./languages/csp":46,"./languages/css":47,"./languages/d":48,"./languages/dart":49,"./languages/delphi":50,"./languages/diff":51,"./languages/django":52,"./languages/dns":53,"./languages/dockerfile":54,"./languages/dos":55,"./languages/dsconfig":56,"./languages/dts":57,"./languages/dust":58,"./languages/ebnf":59,"./languages/elixir":60,"./languages/elm":61,"./languages/erb":62,"./languages/erlang":64,"./languages/erlang-repl":63,"./languages/excel":65,"./languages/fix":66,"./languages/fortran":67,"./languages/fsharp":68,"./languages/gams":69,"./languages/gauss":70,"./languages/gcode":71,"./languages/gherkin":72,"./languages/glsl":73,"./languages/go":74,"./languages/golo":75,"./languages/gradle":76,"./languages/groovy":77,"./languages/haml":78,"./languages/handlebars":79,"./languages/haskell":80,"./languages/haxe":81,"./languages/hsp":82,"./languages/htmlbars":83,"./languages/http":84,"./languages/inform7":85,"./languages/ini":86,"./languages/irpf90":87,"./languages/java":88,"./languages/javascript":89,"./languages/json":90,"./languages/julia":91,"./languages/kotlin":92,"./languages/lasso":93,"./languages/ldif":94,"./languages/less":95,"./languages/lisp":96,"./languages/livecodeserver":97,"./languages/livescript":98,"./languages/lsl":99,"./languages/lua":100,"./languages/makefile":101,"./languages/markdown":102,"./languages/mathematica":103,"./languages/matlab":104,"./languages/maxima":105,"./languages/mel":106,"./languages/mercury":107,"./languages/mipsasm":108,"./languages/mizar":109,"./languages/mojolicious":110,"./languages/monkey":111,"./languages/moonscript":112,"./languages/nginx":113,"./languages/nimrod":114,"./languages/nix":115,"./languages/nsis":116,"./languages/objectivec":117,"./languages/ocaml":118,"./languages/openscad":119,"./languages/oxygene":120,"./languages/parser3":121,"./languages/perl":122,"./languages/pf":123,"./languages/php":124,"./languages/pony":125,"./languages/powershell":126,"./languages/processing":127,"./languages/profile":128,"./languages/prolog":129,"./languages/protobuf":130,"./languages/puppet":131,"./languages/purebasic":132,"./languages/python":133,"./languages/q":134,"./languages/qml":135,"./languages/r":136,"./languages/rib":137,"./languages/roboconf":138,"./languages/rsl":139,"./languages/ruby":140,"./languages/ruleslanguage":141,"./languages/rust":142,"./languages/scala":143,"./languages/scheme":144,"./languages/scilab":145,"./languages/scss":146,"./languages/smali":147,"./languages/smalltalk":148,"./languages/sml":149,"./languages/sqf":150,"./languages/sql":151,"./languages/stan":152,"./languages/stata":153,"./languages/step21":154,"./languages/stylus":155,"./languages/subunit":156,"./languages/swift":157,"./languages/taggerscript":158,"./languages/tap":159,"./languages/tcl":160,"./languages/tex":161,"./languages/thrift":162,"./languages/tp":163,"./languages/twig":164,"./languages/typescript":165,"./languages/vala":166,"./languages/vbnet":167,"./languages/vbscript":169,"./languages/vbscript-html":168,"./languages/verilog":170,"./languages/vhdl":171,"./languages/vim":172,"./languages/x86asm":173,"./languages/xl":174,"./languages/xml":175,"./languages/xquery":176,"./languages/yaml":177,"./languages/zephir":178}],13:[function(require,module,exports){
+},{"./highlight":15,"./languages/1c":17,"./languages/abnf":18,"./languages/accesslog":19,"./languages/actionscript":20,"./languages/ada":21,"./languages/apache":22,"./languages/applescript":23,"./languages/arduino":24,"./languages/armasm":25,"./languages/asciidoc":26,"./languages/aspectj":27,"./languages/autohotkey":28,"./languages/autoit":29,"./languages/avrasm":30,"./languages/awk":31,"./languages/axapta":32,"./languages/bash":33,"./languages/basic":34,"./languages/bnf":35,"./languages/brainfuck":36,"./languages/cal":37,"./languages/capnproto":38,"./languages/ceylon":39,"./languages/clojure":41,"./languages/clojure-repl":40,"./languages/cmake":42,"./languages/coffeescript":43,"./languages/coq":44,"./languages/cos":45,"./languages/cpp":46,"./languages/crmsh":47,"./languages/crystal":48,"./languages/cs":49,"./languages/csp":50,"./languages/css":51,"./languages/d":52,"./languages/dart":53,"./languages/delphi":54,"./languages/diff":55,"./languages/django":56,"./languages/dns":57,"./languages/dockerfile":58,"./languages/dos":59,"./languages/dsconfig":60,"./languages/dts":61,"./languages/dust":62,"./languages/ebnf":63,"./languages/elixir":64,"./languages/elm":65,"./languages/erb":66,"./languages/erlang":68,"./languages/erlang-repl":67,"./languages/excel":69,"./languages/fix":70,"./languages/fortran":71,"./languages/fsharp":72,"./languages/gams":73,"./languages/gauss":74,"./languages/gcode":75,"./languages/gherkin":76,"./languages/glsl":77,"./languages/go":78,"./languages/golo":79,"./languages/gradle":80,"./languages/groovy":81,"./languages/haml":82,"./languages/handlebars":83,"./languages/haskell":84,"./languages/haxe":85,"./languages/hsp":86,"./languages/htmlbars":87,"./languages/http":88,"./languages/inform7":89,"./languages/ini":90,"./languages/irpf90":91,"./languages/java":92,"./languages/javascript":93,"./languages/json":94,"./languages/julia":95,"./languages/kotlin":96,"./languages/lasso":97,"./languages/ldif":98,"./languages/less":99,"./languages/lisp":100,"./languages/livecodeserver":101,"./languages/livescript":102,"./languages/lsl":103,"./languages/lua":104,"./languages/makefile":105,"./languages/markdown":106,"./languages/mathematica":107,"./languages/matlab":108,"./languages/maxima":109,"./languages/mel":110,"./languages/mercury":111,"./languages/mipsasm":112,"./languages/mizar":113,"./languages/mojolicious":114,"./languages/monkey":115,"./languages/moonscript":116,"./languages/nginx":117,"./languages/nimrod":118,"./languages/nix":119,"./languages/nsis":120,"./languages/objectivec":121,"./languages/ocaml":122,"./languages/openscad":123,"./languages/oxygene":124,"./languages/parser3":125,"./languages/perl":126,"./languages/pf":127,"./languages/php":128,"./languages/pony":129,"./languages/powershell":130,"./languages/processing":131,"./languages/profile":132,"./languages/prolog":133,"./languages/protobuf":134,"./languages/puppet":135,"./languages/purebasic":136,"./languages/python":137,"./languages/q":138,"./languages/qml":139,"./languages/r":140,"./languages/rib":141,"./languages/roboconf":142,"./languages/rsl":143,"./languages/ruby":144,"./languages/ruleslanguage":145,"./languages/rust":146,"./languages/scala":147,"./languages/scheme":148,"./languages/scilab":149,"./languages/scss":150,"./languages/smali":151,"./languages/smalltalk":152,"./languages/sml":153,"./languages/sqf":154,"./languages/sql":155,"./languages/stan":156,"./languages/stata":157,"./languages/step21":158,"./languages/stylus":159,"./languages/subunit":160,"./languages/swift":161,"./languages/taggerscript":162,"./languages/tap":163,"./languages/tcl":164,"./languages/tex":165,"./languages/thrift":166,"./languages/tp":167,"./languages/twig":168,"./languages/typescript":169,"./languages/vala":170,"./languages/vbnet":171,"./languages/vbscript":173,"./languages/vbscript-html":172,"./languages/verilog":174,"./languages/vhdl":175,"./languages/vim":176,"./languages/x86asm":177,"./languages/xl":178,"./languages/xml":179,"./languages/xquery":180,"./languages/yaml":181,"./languages/zephir":182}],17:[function(require,module,exports){
 module.exports = function(hljs){
   var IDENT_RE_RU = '[a-zA-Zа-яА-Я][a-zA-Z0-9_а-яА-Я]*';
   var OneS_KEYWORDS = 'возврат дата для если и или иначе иначеесли исключение конецесли ' +
@@ -3268,7 +3818,7 @@ module.exports = function(hljs){
     ]
   };
 };
-},{}],14:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 module.exports = function(hljs) {
     var regexes = {
         ruleDeclaration: "^[a-zA-Z][a-zA-Z0-9-]*",
@@ -3339,7 +3889,7 @@ module.exports = function(hljs) {
       ]
     };
 };
-},{}],15:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     contains: [
@@ -3377,7 +3927,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],16:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 module.exports = function(hljs) {
   var IDENT_RE = '[a-zA-Z_$][a-zA-Z0-9_$]*';
   var IDENT_FUNC_RETURN_TYPE_RE = '([*]|[a-zA-Z_$][a-zA-Z0-9_$]*)';
@@ -3451,7 +4001,7 @@ module.exports = function(hljs) {
     illegal: /#/
   };
 };
-},{}],17:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 module.exports = // We try to support full Ada2012
 //
 // We highlight all appearances of types, keywords, literals (string, char, number, bool)
@@ -3624,7 +4174,7 @@ function(hljs) {
         ]
     };
 };
-},{}],18:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 module.exports = function(hljs) {
   var NUMBER = {className: 'number', begin: '[\\$%]\\d+'};
   return {
@@ -3670,7 +4220,7 @@ module.exports = function(hljs) {
     illegal: /\S/
   };
 };
-},{}],19:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 module.exports = function(hljs) {
   var STRING = hljs.inherit(hljs.QUOTE_STRING_MODE, {illegal: ''});
   var PARAMS = {
@@ -3756,7 +4306,7 @@ module.exports = function(hljs) {
     illegal: '//|->|=>|\\[\\['
   };
 };
-},{}],20:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 module.exports = function(hljs) {
   var CPP = hljs.getLanguage('cpp').exports;
 	return {
@@ -3856,7 +4406,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],21:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 module.exports = function(hljs) {
     //local labels: %?[FB]?[AT]?\d{1,2}\w+
   return {
@@ -3948,7 +4498,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],22:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['adoc'],
@@ -4136,7 +4686,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],23:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 module.exports = function (hljs) {
   var KEYWORDS =
     'false synchronized int abstract float private char boolean static null if const ' +
@@ -4280,7 +4830,7 @@ module.exports = function (hljs) {
     ]
   };
 };
-},{}],24:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 module.exports = function(hljs) {
   var BACKTICK_ESCAPE = {
     begin: /`[\s\S]/
@@ -4328,7 +4878,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],25:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 module.exports = function(hljs) {
     var KEYWORDS = 'ByRef Case Const ContinueCase ContinueLoop ' +
         'Default Dim Do Else ElseIf EndFunc EndIf EndSelect ' +
@@ -4464,7 +5014,7 @@ module.exports = function(hljs) {
         ]
     }
 };
-},{}],26:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     case_insensitive: true,
@@ -4526,7 +5076,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],27:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 module.exports = function(hljs) {
   var VARIABLE = {
     className: 'variable',
@@ -4579,7 +5129,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],28:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: 'false int abstract private char boolean static null if for true ' +
@@ -4610,7 +5160,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],29:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 module.exports = function(hljs) {
   var VAR = {
     className: 'variable',
@@ -4685,7 +5235,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],30:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     case_insensitive: true,
@@ -4736,7 +5286,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],31:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 module.exports = function(hljs){
   return {
     contains: [
@@ -4765,7 +5315,7 @@ module.exports = function(hljs){
     ]
   };
 };
-},{}],32:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 module.exports = function(hljs){
   var LITERAL = {
     className: 'literal',
@@ -4802,7 +5352,7 @@ module.exports = function(hljs){
     ]
   };
 };
-},{}],33:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS =
     'div mod in and or not xor asserterror begin case do downto else end exit for if of repeat then to ' +
@@ -4882,7 +5432,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],34:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['capnp'],
@@ -4931,7 +5481,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],35:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 module.exports = function(hljs) {
   // 2.3. Identifiers and keywords
   var KEYWORDS =
@@ -4998,7 +5548,7 @@ module.exports = function(hljs) {
     ].concat(EXPRESSIONS)
   };
 };
-},{}],36:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     contains: [
@@ -5013,7 +5563,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],37:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 module.exports = function(hljs) {
   var keywords = {
     'builtin-name':
@@ -5108,7 +5658,7 @@ module.exports = function(hljs) {
     contains: [LIST, STRING, HINT, HINT_COL, COMMENT, KEY, COLLECTION, NUMBER, LITERAL]
   }
 };
-},{}],38:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['cmake.in'],
@@ -5146,7 +5696,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],39:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
     keyword:
@@ -5285,7 +5835,7 @@ module.exports = function(hljs) {
     ])
   };
 };
-},{}],40:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: {
@@ -5352,7 +5902,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],41:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 module.exports = function cos (hljs) {
 
   var STRINGS = {
@@ -5476,7 +6026,7 @@ module.exports = function cos (hljs) {
     ]
   };
 };
-},{}],42:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 module.exports = function(hljs) {
   var CPP_PRIMITIVE_TYPES = {
     className: 'keyword',
@@ -5642,7 +6192,7 @@ module.exports = function(hljs) {
     }
   };
 };
-},{}],43:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 module.exports = function(hljs) {
   var RESOURCES = 'primitive rsc_template';
 
@@ -5736,7 +6286,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],44:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 module.exports = function(hljs) {
   var NUM_SUFFIX = '(_[uif](8|16|32|64))?';
   var CRYSTAL_IDENT_RE = '[a-zA-Z_]\\w*[!?=]?';
@@ -5913,7 +6463,7 @@ module.exports = function(hljs) {
     contains: CRYSTAL_DEFAULT_CONTAINS
   };
 };
-},{}],45:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
     keyword:
@@ -6080,7 +6630,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],46:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     case_insensitive: false,
@@ -6102,7 +6652,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],47:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 module.exports = function(hljs) {
   var IDENT_RE = '[a-zA-Z-][a-zA-Z0-9_-]*';
   var RULE = {
@@ -6207,7 +6757,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],48:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 module.exports = /**
  * Known issues:
  *
@@ -6465,7 +7015,7 @@ function(hljs) {
     ]
   };
 };
-},{}],49:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 module.exports = function (hljs) {
   var SUBST = {
     className: 'subst',
@@ -6566,7 +7116,7 @@ module.exports = function (hljs) {
     ]
   }
 };
-},{}],50:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS =
     'exports register file shl array record property for mod while set ally label uses raise not ' +
@@ -6634,7 +7184,7 @@ module.exports = function(hljs) {
     ].concat(COMMENT_MODES)
   };
 };
-},{}],51:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['patch'],
@@ -6674,7 +7224,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],52:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 module.exports = function(hljs) {
   var FILTER = {
     begin: /\|[A-Za-z]+:?/,
@@ -6738,7 +7288,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],53:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['bind', 'zone'],
@@ -6767,7 +7317,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],54:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['docker'],
@@ -6796,7 +7346,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],55:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 module.exports = function(hljs) {
   var COMMENT = hljs.COMMENT(
     /^\s*@?rem\b/, /$/,
@@ -6848,7 +7398,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],56:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 module.exports = function(hljs) {
   var QUOTED_PROPERTY = {
     className: 'string',
@@ -6895,7 +7445,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],57:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 module.exports = function(hljs) {
   var STRINGS = {
     className: 'string',
@@ -7019,7 +7569,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],58:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 module.exports = function(hljs) {
   var EXPRESSION_KEYWORDS = 'if eq ne lt lte gt gte select default math sep';
   return {
@@ -7051,7 +7601,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],59:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 module.exports = function(hljs) {
     var commentMode = hljs.COMMENT(/\(\*/, /\*\)/);
 
@@ -7084,7 +7634,7 @@ module.exports = function(hljs) {
         ]
     };
 };
-},{}],60:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 module.exports = function(hljs) {
   var ELIXIR_IDENT_RE = '[a-zA-Z_][a-zA-Z0-9_]*(\\!|\\?)?';
   var ELIXIR_METHOD_RE = '[a-zA-Z_]\\w*[!?=]?|[-+~]\\@|<<|>>|=~|===?|<=>|[<>]=?|\\*\\*|[-/+%^&*~`|]|\\[\\]=?';
@@ -7181,7 +7731,7 @@ module.exports = function(hljs) {
     contains: ELIXIR_DEFAULT_CONTAINS
   };
 };
-},{}],61:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 module.exports = function(hljs) {
   var COMMENT = {
     variants: [
@@ -7264,7 +7814,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],62:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     subLanguage: 'xml',
@@ -7279,7 +7829,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],63:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: {
@@ -7325,7 +7875,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],64:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 module.exports = function(hljs) {
   var BASIC_ATOM_RE = '[a-z\'][a-zA-Z0-9_\']*';
   var FUNCTION_NAME_RE = '(' + BASIC_ATOM_RE + ':' + BASIC_ATOM_RE + '|' + BASIC_ATOM_RE + ')';
@@ -7471,7 +8021,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],65:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['xlsx', 'xls'],
@@ -7519,7 +8069,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],66:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     contains: [
@@ -7548,7 +8098,7 @@ module.exports = function(hljs) {
     case_insensitive: true
   };
 };
-},{}],67:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 module.exports = function(hljs) {
   var PARAMS = {
     className: 'params',
@@ -7619,7 +8169,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],68:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 module.exports = function(hljs) {
   var TYPEPARAM = {
     begin: '<', end: '>',
@@ -7678,7 +8228,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],69:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 module.exports = function (hljs) {
   var KEYWORDS = {
     'keyword':
@@ -7832,7 +8382,7 @@ module.exports = function (hljs) {
     ]
   };
 };
-},{}],70:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
     keyword: 'and bool break call callexe checkinterrupt clear clearg closeall cls comlog compile ' +
@@ -8054,7 +8604,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],71:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 module.exports = function(hljs) {
     var GCODE_IDENT_RE = '[A-Z_][A-Z0-9_.]*';
     var GCODE_CLOSE_RE = '\\%';
@@ -8121,7 +8671,7 @@ module.exports = function(hljs) {
         ].concat(GCODE_CODE)
     };
 };
-},{}],72:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 module.exports = function (hljs) {
   return {
     aliases: ['feature'],
@@ -8158,7 +8708,7 @@ module.exports = function (hljs) {
     ]
   };
 };
-},{}],73:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: {
@@ -8275,7 +8825,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],74:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 module.exports = function(hljs) {
   var GO_KEYWORDS = {
     keyword:
@@ -8329,7 +8879,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],75:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 module.exports = function(hljs) {
     return {
       keywords: {
@@ -8352,7 +8902,7 @@ module.exports = function(hljs) {
       ]
     }
 };
-},{}],76:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     case_insensitive: true,
@@ -8387,7 +8937,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],77:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 module.exports = function(hljs) {
     return {
         keywords: {
@@ -8481,7 +9031,7 @@ module.exports = function(hljs) {
         illegal: /#|<\//
     }
 };
-},{}],78:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 module.exports = // TODO support filter tags like :javascript, support inline HTML
 function(hljs) {
   return {
@@ -8588,7 +9138,7 @@ function(hljs) {
     ]
   };
 };
-},{}],79:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 module.exports = function(hljs) {
   var BUILT_INS = {'builtin-name': 'each in with if else unless bindattr action collection debugger log outlet template unbound view yield'};
   return {
@@ -8622,7 +9172,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],80:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 module.exports = function(hljs) {
   var COMMENT = {
     variants: [
@@ -8744,7 +9294,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],81:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 module.exports = function(hljs) {
   var IDENT_RE = '[a-zA-Z_$][a-zA-Z0-9_$]*';
   var IDENT_FUNC_RETURN_TYPE_RE = '([*]|[a-zA-Z_$][a-zA-Z0-9_$]*)';
@@ -8802,7 +9352,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],82:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     case_insensitive: true,
@@ -8848,7 +9398,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],83:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 module.exports = function(hljs) {
   var BUILT_INS = 'action collection component concat debugger each each-in else get hash if input link-to loc log mut outlet partial query-params render textarea unbound unless with yield view';
 
@@ -8919,7 +9469,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],84:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 module.exports = function(hljs) {
   var VERSION = 'HTTP/[0-9\\.]+';
   return {
@@ -8960,7 +9510,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],85:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 module.exports = function(hljs) {
   var START_BRACKET = '\\[';
   var END_BRACKET = '\\]';
@@ -9017,7 +9567,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],86:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 module.exports = function(hljs) {
   var STRING = {
     className: "string",
@@ -9083,7 +9633,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],87:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 module.exports = function(hljs) {
   var PARAMS = {
     className: 'params',
@@ -9159,7 +9709,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],88:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 module.exports = function(hljs) {
   var GENERIC_IDENT_RE = hljs.UNDERSCORE_IDENT_RE + '(<' + hljs.UNDERSCORE_IDENT_RE + '(\\s*,\\s*' + hljs.UNDERSCORE_IDENT_RE + ')*>)?';
   var KEYWORDS =
@@ -9266,7 +9816,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],89:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['js', 'jsx'],
@@ -9380,7 +9930,7 @@ module.exports = function(hljs) {
     illegal: /#(?!!)/
   };
 };
-},{}],90:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 module.exports = function(hljs) {
   var LITERALS = {literal: 'true false null'};
   var TYPES = [
@@ -9417,7 +9967,7 @@ module.exports = function(hljs) {
     illegal: '\\S'
   };
 };
-},{}],91:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 module.exports = function(hljs) {
   // Since there are numerous special names in Julia, it is too much trouble
   // to maintain them by hand. Hence these names (i.e. keywords, literals and
@@ -9595,7 +10145,7 @@ module.exports = function(hljs) {
 
   return DEFAULT;
 };
-},{}],92:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 module.exports = function (hljs) {
   var KEYWORDS = {
     keyword:
@@ -9769,7 +10319,7 @@ module.exports = function (hljs) {
     ]
   };
 };
-},{}],93:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 module.exports = function(hljs) {
   var LASSO_IDENT_RE = '[a-zA-Z_][\\w.]*';
   var LASSO_ANGLE_RE = '<\\?(lasso(script)?|=)';
@@ -9932,7 +10482,7 @@ module.exports = function(hljs) {
     ].concat(LASSO_CODE)
   };
 };
-},{}],94:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     contains: [
@@ -9955,7 +10505,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],95:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 module.exports = function(hljs) {
   var IDENT_RE        = '[\\w-]+'; // yes, Less identifiers may begin with a digit
   var INTERP_IDENT_RE = '(' + IDENT_RE + '|@{' + IDENT_RE + '})';
@@ -10095,7 +10645,7 @@ module.exports = function(hljs) {
     contains: RULES
   };
 };
-},{}],96:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 module.exports = function(hljs) {
   var LISP_IDENT_RE = '[a-zA-Z_\\-\\+\\*\\/\\<\\=\\>\\&\\#][a-zA-Z0-9_\\-\\+\\*\\/\\<\\=\\>\\&\\#!]*';
   var MEC_RE = '\\|[^]*?\\|';
@@ -10198,7 +10748,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],97:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 module.exports = function(hljs) {
   var VARIABLE = {
     begin: '\\b[gtps][A-Z]+[A-Za-z0-9_\\-]*\\b|\\$_[A-Z]+',
@@ -10355,7 +10905,7 @@ module.exports = function(hljs) {
     illegal: ';$|^\\[|^=|&|{'
   };
 };
-},{}],98:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
     keyword:
@@ -10504,7 +11054,7 @@ module.exports = function(hljs) {
     ])
   };
 };
-},{}],99:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 module.exports = function(hljs) {
 
     var LSL_STRING_ESCAPE_CHARS = {
@@ -10587,7 +11137,7 @@ module.exports = function(hljs) {
         ]
     };
 };
-},{}],100:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 module.exports = function(hljs) {
   var OPENING_LONG_BRACKET = '\\[=*\\[';
   var CLOSING_LONG_BRACKET = '\\]=*\\]';
@@ -10643,7 +11193,7 @@ module.exports = function(hljs) {
     ])
   };
 };
-},{}],101:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 module.exports = function(hljs) {
   var VARIABLE = {
     className: 'variable',
@@ -10688,7 +11238,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],102:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['md', 'mkdown', 'mkd'],
@@ -10796,7 +11346,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],103:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['mma'],
@@ -10854,7 +11404,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],104:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 module.exports = function(hljs) {
   var COMMON_CONTAINS = [
     hljs.C_NUMBER_MODE,
@@ -10942,7 +11492,7 @@ module.exports = function(hljs) {
     ].concat(COMMON_CONTAINS)
   };
 };
-},{}],105:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = 'if then else elseif for thru do while unless step in and or not';
   var LITERALS = 'true false unknown inf minf ind und %e %i %pi %phi %gamma';
@@ -11348,7 +11898,7 @@ module.exports = function(hljs) {
     illegal: /@/
   }
 };
-},{}],106:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords:
@@ -11573,7 +12123,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],107:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
     keyword:
@@ -11655,7 +12205,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],108:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 module.exports = function(hljs) {
     //local labels: %?[FB]?[AT]?\d{1,2}\w+
   return {
@@ -11741,7 +12291,7 @@ module.exports = function(hljs) {
     illegal: '\/'
   };
 };
-},{}],109:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords:
@@ -11760,7 +12310,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],110:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     subLanguage: 'xml',
@@ -11785,7 +12335,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],111:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 module.exports = function(hljs) {
   var NUMBER = {
     className: 'number', relevance: 0,
@@ -11860,7 +12410,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],112:[function(require,module,exports){
+},{}],116:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
     keyword:
@@ -11972,7 +12522,7 @@ module.exports = function(hljs) {
     ])
   };
 };
-},{}],113:[function(require,module,exports){
+},{}],117:[function(require,module,exports){
 module.exports = function(hljs) {
   var VAR = {
     className: 'variable',
@@ -12065,7 +12615,7 @@ module.exports = function(hljs) {
     illegal: '[^\\s\\}]'
   };
 };
-},{}],114:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['nim'],
@@ -12120,7 +12670,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],115:[function(require,module,exports){
+},{}],119:[function(require,module,exports){
 module.exports = function(hljs) {
   var NIX_KEYWORDS = {
     keyword:
@@ -12169,7 +12719,7 @@ module.exports = function(hljs) {
     contains: EXPRESSIONS
   };
 };
-},{}],116:[function(require,module,exports){
+},{}],120:[function(require,module,exports){
 module.exports = function(hljs) {
   var CONSTANTS = {
     className: 'variable',
@@ -12255,7 +12805,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],117:[function(require,module,exports){
+},{}],121:[function(require,module,exports){
 module.exports = function(hljs) {
   var API_CLASS = {
     className: 'built_in',
@@ -12346,7 +12896,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],118:[function(require,module,exports){
+},{}],122:[function(require,module,exports){
 module.exports = function(hljs) {
   /* missing support for heredoc-like string (OCaml 4.0.2+) */
   return {
@@ -12417,7 +12967,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],119:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 module.exports = function(hljs) {
 	var SPECIAL_VARS = {
 		className: 'keyword',
@@ -12474,7 +13024,7 @@ module.exports = function(hljs) {
 		]
 	}
 };
-},{}],120:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 module.exports = function(hljs) {
   var OXYGENE_KEYWORDS = 'abstract add and array as asc aspect assembly async begin break block by case class concat const copy constructor continue '+
     'create default delegate desc distinct div do downto dynamic each else empty end ensure enum equals event except exit extension external false '+
@@ -12544,7 +13094,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],121:[function(require,module,exports){
+},{}],125:[function(require,module,exports){
 module.exports = function(hljs) {
   var CURLY_SUBCOMMENT = hljs.COMMENT(
     '{',
@@ -12592,7 +13142,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],122:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 module.exports = function(hljs) {
   var PERL_KEYWORDS = 'getpwent getservent quotemeta msgrcv scalar kill dbmclose undef lc ' +
     'ma syswrite tr send umask sysopen shmwrite vec qx utime local oct semctl localtime ' +
@@ -12749,7 +13299,7 @@ module.exports = function(hljs) {
     contains: PERL_DEFAULT_CONTAINS
   };
 };
-},{}],123:[function(require,module,exports){
+},{}],127:[function(require,module,exports){
 module.exports = function(hljs) {
   var MACRO = {
     className: 'variable',
@@ -12801,7 +13351,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],124:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 module.exports = function(hljs) {
   var VARIABLE = {
     begin: '\\$+[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*'
@@ -12928,7 +13478,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],125:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
     keyword:
@@ -13019,7 +13569,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],126:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 module.exports = function(hljs) {
   var BACKTICK_ESCAPE = {
     begin: '`[\\s\\S]',
@@ -13100,7 +13650,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],127:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: {
@@ -13148,7 +13698,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],128:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     contains: [
@@ -13178,7 +13728,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],129:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 module.exports = function(hljs) {
 
   var ATOM = {
@@ -13266,7 +13816,7 @@ module.exports = function(hljs) {
     ])
   };
 };
-},{}],130:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: {
@@ -13302,7 +13852,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],131:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 module.exports = function(hljs) {
 
   var PUPPET_KEYWORDS = {
@@ -13417,7 +13967,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],132:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 module.exports = // Base deafult colors in PB IDE: background: #FFFFDF; foreground: #000000;
 
 function(hljs) {
@@ -13475,7 +14025,7 @@ function(hljs) {
     ]
   };
 };
-},{}],133:[function(require,module,exports){
+},{}],137:[function(require,module,exports){
 module.exports = function(hljs) {
   var PROMPT = {
     className: 'meta',  begin: /^(>>>|\.\.\.) /
@@ -13567,7 +14117,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],134:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 module.exports = function(hljs) {
   var Q_KEYWORDS = {
   keyword:
@@ -13590,7 +14140,7 @@ module.exports = function(hljs) {
      ]
   };
 };
-},{}],135:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
       keyword:
@@ -13759,7 +14309,7 @@ module.exports = function(hljs) {
     illegal: /#/
   };
 };
-},{}],136:[function(require,module,exports){
+},{}],140:[function(require,module,exports){
 module.exports = function(hljs) {
   var IDENT_RE = '([a-zA-Z]|\\.[a-zA-Z.])[a-zA-Z0-9._]*';
 
@@ -13829,7 +14379,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],137:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords:
@@ -13856,7 +14406,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],138:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 module.exports = function(hljs) {
   var IDENTIFIER = '[a-zA-Z-_][^\\n{]+\\{';
 
@@ -13923,7 +14473,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],139:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: {
@@ -13959,7 +14509,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],140:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 module.exports = function(hljs) {
   var RUBY_METHOD_RE = '[a-zA-Z_]\\w*[!?=]?|[-+~]\\@|<<|>>|=~|===?|<=>|[<>]=?|\\*\\*|[-/+%^&*~`|]|\\[\\]=?';
   var RUBY_KEYWORDS = {
@@ -14132,7 +14682,7 @@ module.exports = function(hljs) {
     contains: COMMENT_MODES.concat(IRB_DEFAULT).concat(RUBY_DEFAULT_CONTAINS)
   };
 };
-},{}],141:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: {
@@ -14193,7 +14743,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],142:[function(require,module,exports){
+},{}],146:[function(require,module,exports){
 module.exports = function(hljs) {
   var NUM_SUFFIX = '([uif](8|16|32|64|size))\?';
   var BLOCK_COMMENT = hljs.inherit(hljs.C_BLOCK_COMMENT_MODE);
@@ -14299,7 +14849,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],143:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 module.exports = function(hljs) {
 
   var ANNOTATION = { className: 'meta', begin: '@[A-Za-z]+' };
@@ -14414,7 +14964,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],144:[function(require,module,exports){
+},{}],148:[function(require,module,exports){
 module.exports = function(hljs) {
   var SCHEME_IDENT_RE = '[^\\(\\)\\[\\]\\{\\}",\'`;#|\\\\\\s]+';
   var SCHEME_SIMPLE_NUMBER_RE = '(\\-|\\+)?\\d+([./]\\d+)?';
@@ -14555,7 +15105,7 @@ module.exports = function(hljs) {
     contains: [SHEBANG, NUMBER, STRING, QUOTED_IDENT, QUOTED_LIST, LIST].concat(COMMENT_MODES)
   };
 };
-},{}],145:[function(require,module,exports){
+},{}],149:[function(require,module,exports){
 module.exports = function(hljs) {
 
   var COMMON_CONTAINS = [
@@ -14609,7 +15159,7 @@ module.exports = function(hljs) {
     ].concat(COMMON_CONTAINS)
   };
 };
-},{}],146:[function(require,module,exports){
+},{}],150:[function(require,module,exports){
 module.exports = function(hljs) {
   var IDENT_RE = '[a-zA-Z-][a-zA-Z0-9_-]*';
   var VARIABLE = {
@@ -14707,7 +15257,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],147:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 module.exports = function(hljs) {
   var smali_instr_low_prio = ['add', 'and', 'cmp', 'cmpg', 'cmpl', 'const', 'div', 'double', 'float', 'goto', 'if', 'int', 'long', 'move', 'mul', 'neg', 'new', 'nop', 'not', 'or', 'rem', 'return', 'shl', 'shr', 'sput', 'sub', 'throw', 'ushr', 'xor'];
   var smali_instr_high_prio = ['aget', 'aput', 'array', 'check', 'execute', 'fill', 'filled', 'goto/16', 'goto/32', 'iget', 'instance', 'invoke', 'iput', 'monitor', 'packed', 'sget', 'sparse'];
@@ -14763,7 +15313,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],148:[function(require,module,exports){
+},{}],152:[function(require,module,exports){
 module.exports = function(hljs) {
   var VAR_IDENT_RE = '[a-z][a-zA-Z0-9_]*';
   var CHAR = {
@@ -14813,7 +15363,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],149:[function(require,module,exports){
+},{}],153:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['ml'],
@@ -14879,7 +15429,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],150:[function(require,module,exports){
+},{}],154:[function(require,module,exports){
 module.exports = function(hljs) {
   var CPP = hljs.getLanguage('cpp').exports;
 
@@ -15340,7 +15890,7 @@ module.exports = function(hljs) {
     illegal: /#/
   };
 };
-},{}],151:[function(require,module,exports){
+},{}],155:[function(require,module,exports){
 module.exports = function(hljs) {
   var COMMENT_MODE = hljs.COMMENT('--', '$');
   return {
@@ -15500,7 +16050,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],152:[function(require,module,exports){
+},{}],156:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     contains: [
@@ -15583,7 +16133,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],153:[function(require,module,exports){
+},{}],157:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['do', 'ado'],
@@ -15621,7 +16171,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],154:[function(require,module,exports){
+},{}],158:[function(require,module,exports){
 module.exports = function(hljs) {
   var STEP21_IDENT_RE = '[A-Z_][A-Z0-9_.]*';
   var STEP21_KEYWORDS = {
@@ -15668,7 +16218,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],155:[function(require,module,exports){
+},{}],159:[function(require,module,exports){
 module.exports = function(hljs) {
 
   var VARIABLE = {
@@ -16122,7 +16672,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],156:[function(require,module,exports){
+},{}],160:[function(require,module,exports){
 module.exports = function(hljs) {
   var DETAILS = {
     className: 'string',
@@ -16156,7 +16706,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],157:[function(require,module,exports){
+},{}],161:[function(require,module,exports){
 module.exports = function(hljs) {
   var SWIFT_KEYWORDS = {
       keyword: '__COLUMN__ __FILE__ __FUNCTION__ __LINE__ as as! as? associativity ' +
@@ -16273,7 +16823,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],158:[function(require,module,exports){
+},{}],162:[function(require,module,exports){
 module.exports = function(hljs) {
 
   var COMMENT = {
@@ -16317,7 +16867,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],159:[function(require,module,exports){
+},{}],163:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     case_insensitive: true,
@@ -16353,7 +16903,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],160:[function(require,module,exports){
+},{}],164:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['tk'],
@@ -16414,7 +16964,7 @@ module.exports = function(hljs) {
     ]
   }
 };
-},{}],161:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 module.exports = function(hljs) {
   var COMMAND = {
     className: 'tag',
@@ -16476,7 +17026,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],162:[function(require,module,exports){
+},{}],166:[function(require,module,exports){
 module.exports = function(hljs) {
   var BUILT_IN_TYPES = 'bool byte i16 i32 i64 double string binary';
   return {
@@ -16511,7 +17061,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],163:[function(require,module,exports){
+},{}],167:[function(require,module,exports){
 module.exports = function(hljs) {
   var TPID = {
     className: 'number',
@@ -16595,7 +17145,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],164:[function(require,module,exports){
+},{}],168:[function(require,module,exports){
 module.exports = function(hljs) {
   var PARAMS = {
     className: 'params',
@@ -16661,7 +17211,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],165:[function(require,module,exports){
+},{}],169:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = {
     keyword:
@@ -16770,7 +17320,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],166:[function(require,module,exports){
+},{}],170:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     keywords: {
@@ -16820,7 +17370,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],167:[function(require,module,exports){
+},{}],171:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['vb'],
@@ -16876,7 +17426,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],168:[function(require,module,exports){
+},{}],172:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     subLanguage: 'xml',
@@ -16888,7 +17438,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],169:[function(require,module,exports){
+},{}],173:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     aliases: ['vbs'],
@@ -16927,7 +17477,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],170:[function(require,module,exports){
+},{}],174:[function(require,module,exports){
 module.exports = function(hljs) {
   var SV_KEYWORDS = {
     keyword:
@@ -17026,7 +17576,7 @@ module.exports = function(hljs) {
     ]
   }; // return
 };
-},{}],171:[function(require,module,exports){
+},{}],175:[function(require,module,exports){
 module.exports = function(hljs) {
   // Regular expression for VHDL numeric literals.
 
@@ -17082,7 +17632,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],172:[function(require,module,exports){
+},{}],176:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     lexemes: /[!#@\w]+/,
@@ -17188,7 +17738,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],173:[function(require,module,exports){
+},{}],177:[function(require,module,exports){
 module.exports = function(hljs) {
   return {
     case_insensitive: true,
@@ -17324,7 +17874,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],174:[function(require,module,exports){
+},{}],178:[function(require,module,exports){
 module.exports = function(hljs) {
   var BUILTIN_MODULES =
     'ObjectLoader Animate MovieCredits Slides Filters Shading Materials LensFlare Mapping VLCAudioVideo ' +
@@ -17397,7 +17947,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],175:[function(require,module,exports){
+},{}],179:[function(require,module,exports){
 module.exports = function(hljs) {
   var XML_IDENT_RE = '[A-Za-z0-9\\._:-]+';
   var TAG_INTERNALS = {
@@ -17500,7 +18050,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],176:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 module.exports = function(hljs) {
   var KEYWORDS = 'for let if while then else return where group by xquery encoding version' +
     'module namespace boundary-space preserve strip default collation base-uri ordering' +
@@ -17571,7 +18121,7 @@ module.exports = function(hljs) {
     contains: CONTAINS
   };
 };
-},{}],177:[function(require,module,exports){
+},{}],181:[function(require,module,exports){
 module.exports = function(hljs) {
   var LITERALS = {literal: '{ } true false yes no Yes No True False null'};
 
@@ -17655,7 +18205,7 @@ module.exports = function(hljs) {
     keywords: LITERALS
   };
 };
-},{}],178:[function(require,module,exports){
+},{}],182:[function(require,module,exports){
 module.exports = function(hljs) {
   var STRING = {
     className: 'string',
@@ -17762,7 +18312,7 @@ module.exports = function(hljs) {
     ]
   };
 };
-},{}],179:[function(require,module,exports){
+},{}],183:[function(require,module,exports){
 
 /*
 	Copyright © 2001 Robert Penner
@@ -18030,7 +18580,7 @@ module.exports = function(hljs) {
 
 }).call(this);
 
-},{}],180:[function(require,module,exports){
+},{}],184:[function(require,module,exports){
 /**
  * Bit twiddling hacks for JavaScript.
  *
@@ -18236,7 +18786,7 @@ exports.nextCombination = function(v) {
 }
 
 
-},{}],181:[function(require,module,exports){
+},{}],185:[function(require,module,exports){
 'use strict';
 
 module.exports = earcut;
@@ -18882,7 +19432,7 @@ earcut.flatten = function (data) {
     return result;
 };
 
-},{}],182:[function(require,module,exports){
+},{}],186:[function(require,module,exports){
 'use strict';
 
 var has = Object.prototype.hasOwnProperty;
@@ -19173,7 +19723,7 @@ if ('undefined' !== typeof module) {
   module.exports = EventEmitter;
 }
 
-},{}],183:[function(require,module,exports){
+},{}],187:[function(require,module,exports){
 /**
  * isMobile.js v0.4.0
  *
@@ -19312,7 +19862,7 @@ if ('undefined' !== typeof module) {
 
 })(this);
 
-},{}],184:[function(require,module,exports){
+},{}],188:[function(require,module,exports){
 'use strict';
 /* eslint-disable no-unused-vars */
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -19397,7 +19947,7 @@ module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 	return to;
 };
 
-},{}],185:[function(require,module,exports){
+},{}],189:[function(require,module,exports){
 var EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
 
 /**
@@ -19516,7 +20066,7 @@ Buffer.prototype.destroy = function(){
 
 module.exports = Buffer;
 
-},{}],186:[function(require,module,exports){
+},{}],190:[function(require,module,exports){
 
 var Texture = require('./GLTexture');
 
@@ -19745,7 +20295,7 @@ Framebuffer.createFloat32 = function(gl, width, height, data)
 
 module.exports = Framebuffer;
 
-},{"./GLTexture":188}],187:[function(require,module,exports){
+},{"./GLTexture":192}],191:[function(require,module,exports){
 
 var compileProgram = require('./shader/compileProgram'),
 	extractAttributes = require('./shader/extractAttributes'),
@@ -19823,7 +20373,7 @@ Shader.prototype.destroy = function()
 
 module.exports = Shader;
 
-},{"./shader/compileProgram":193,"./shader/extractAttributes":195,"./shader/extractUniforms":196,"./shader/generateUniformAccessObject":197}],188:[function(require,module,exports){
+},{"./shader/compileProgram":197,"./shader/extractAttributes":199,"./shader/extractUniforms":200,"./shader/generateUniformAccessObject":201}],192:[function(require,module,exports){
 
 /**
  * Helper class to create a WebGL Texture
@@ -20135,7 +20685,7 @@ Texture.fromData = function(gl, data, width, height)
 
 module.exports = Texture;
 
-},{}],189:[function(require,module,exports){
+},{}],193:[function(require,module,exports){
 
 // state object//
 var setVertexAttribArrays = require( './setVertexAttribArrays' );
@@ -20384,7 +20934,7 @@ VertexArrayObject.prototype.destroy = function()
     this.nativeVao = null;
 };
 
-},{"./setVertexAttribArrays":192}],190:[function(require,module,exports){
+},{"./setVertexAttribArrays":196}],194:[function(require,module,exports){
 
 /**
  * Helper class to create a webGL Context
@@ -20412,7 +20962,7 @@ var createContext = function(canvas, options)
 
 module.exports = createContext;
 
-},{}],191:[function(require,module,exports){
+},{}],195:[function(require,module,exports){
 var gl = {
     createContext:          require('./createContext'),
     setVertexAttribArrays:  require('./setVertexAttribArrays'),
@@ -20437,7 +20987,7 @@ if (typeof window !== 'undefined')
     // add the window object
     window.pixi = { gl: gl };
 }
-},{"./GLBuffer":185,"./GLFramebuffer":186,"./GLShader":187,"./GLTexture":188,"./VertexArrayObject":189,"./createContext":190,"./setVertexAttribArrays":192,"./shader":198}],192:[function(require,module,exports){
+},{"./GLBuffer":189,"./GLFramebuffer":190,"./GLShader":191,"./GLTexture":192,"./VertexArrayObject":193,"./createContext":194,"./setVertexAttribArrays":196,"./shader":202}],196:[function(require,module,exports){
 // var GL_MAP = {};
 
 /**
@@ -20494,7 +21044,7 @@ var setVertexAttribArrays = function (gl, attribs, state)
 
 module.exports = setVertexAttribArrays;
 
-},{}],193:[function(require,module,exports){
+},{}],197:[function(require,module,exports){
 
 /**
  * @class
@@ -20564,7 +21114,7 @@ var compileShader = function (gl, type, src)
 
 module.exports = compileProgram;
 
-},{}],194:[function(require,module,exports){
+},{}],198:[function(require,module,exports){
 /**
  * @class
  * @memberof pixi.gl.shader
@@ -20644,7 +21194,7 @@ var booleanArray = function(size)
 
 module.exports = defaultValue;
 
-},{}],195:[function(require,module,exports){
+},{}],199:[function(require,module,exports){
 
 var mapType = require('./mapType');
 var mapSize = require('./mapSize');
@@ -20687,7 +21237,7 @@ var pointer = function(type, normalized, stride, start){
 
 module.exports = extractAttributes;
 
-},{"./mapSize":199,"./mapType":200}],196:[function(require,module,exports){
+},{"./mapSize":203,"./mapType":204}],200:[function(require,module,exports){
 var mapType = require('./mapType');
 var defaultValue = require('./defaultValue');
 
@@ -20724,7 +21274,7 @@ var extractUniforms = function(gl, program)
 
 module.exports = extractUniforms;
 
-},{"./defaultValue":194,"./mapType":200}],197:[function(require,module,exports){
+},{"./defaultValue":198,"./mapType":204}],201:[function(require,module,exports){
 /**
  * Extracts the attributes
  * @class
@@ -20866,7 +21416,7 @@ var GLSL_TO_ARRAY_SETTERS = {
 
 module.exports = generateUniformAccessObject;
 
-},{}],198:[function(require,module,exports){
+},{}],202:[function(require,module,exports){
 module.exports = {
     compileProgram: require('./compileProgram'),
     defaultValue: require('./defaultValue'),
@@ -20876,7 +21426,7 @@ module.exports = {
     mapSize: require('./mapSize'),
     mapType: require('./mapType')  
 };
-},{"./compileProgram":193,"./defaultValue":194,"./extractAttributes":195,"./extractUniforms":196,"./generateUniformAccessObject":197,"./mapSize":199,"./mapType":200}],199:[function(require,module,exports){
+},{"./compileProgram":197,"./defaultValue":198,"./extractAttributes":199,"./extractUniforms":200,"./generateUniformAccessObject":201,"./mapSize":203,"./mapType":204}],203:[function(require,module,exports){
 /**
  * @class
  * @memberof pixi.gl.shader
@@ -20914,7 +21464,7 @@ var GLSL_TO_SIZE = {
 
 module.exports = mapSize;
 
-},{}],200:[function(require,module,exports){
+},{}],204:[function(require,module,exports){
 
 
 var mapSize = function(gl, type) 
@@ -20962,7 +21512,7 @@ var GL_TO_GLSL_TYPES = {
 
 module.exports = mapSize;
 
-},{}],201:[function(require,module,exports){
+},{}],205:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21005,7 +21555,7 @@ function eachLimit(coll, limit, iteratee, callback) {
   (0, _eachOfLimit2.default)(limit)(coll, (0, _withoutIndex2.default)(iteratee), callback);
 }
 module.exports = exports['default'];
-},{"./internal/eachOfLimit":205,"./internal/withoutIndex":212}],202:[function(require,module,exports){
+},{"./internal/eachOfLimit":209,"./internal/withoutIndex":216}],206:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21044,7 +21594,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  */
 exports.default = (0, _doLimit2.default)(_eachLimit2.default, 1);
 module.exports = exports['default'];
-},{"./eachLimit":201,"./internal/doLimit":204}],203:[function(require,module,exports){
+},{"./eachLimit":205,"./internal/doLimit":208}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -21108,7 +21658,7 @@ DLL.prototype.pop = function () {
     return this.tail && this.removeLink(this.tail);
 };
 module.exports = exports['default'];
-},{}],204:[function(require,module,exports){
+},{}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -21121,7 +21671,7 @@ function doLimit(fn, limit) {
     };
 }
 module.exports = exports['default'];
-},{}],205:[function(require,module,exports){
+},{}],209:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21188,7 +21738,7 @@ function _eachOfLimit(limit) {
     };
 }
 module.exports = exports['default'];
-},{"./iterator":207,"./once":208,"./onlyOnce":209,"lodash/noop":233}],206:[function(require,module,exports){
+},{"./iterator":211,"./once":212,"./onlyOnce":213,"lodash/noop":237}],210:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21202,7 +21752,7 @@ exports.default = function (coll) {
 var iteratorSymbol = typeof Symbol === 'function' && Symbol.iterator;
 
 module.exports = exports['default'];
-},{}],207:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21261,7 +21811,7 @@ function iterator(coll) {
     return iterator ? createES2015Iterator(iterator) : createObjectIterator(coll);
 }
 module.exports = exports['default'];
-},{"./getIterator":206,"lodash/isArrayLike":225,"lodash/keys":232}],208:[function(require,module,exports){
+},{"./getIterator":210,"lodash/isArrayLike":229,"lodash/keys":236}],212:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -21277,7 +21827,7 @@ function once(fn) {
     };
 }
 module.exports = exports['default'];
-},{}],209:[function(require,module,exports){
+},{}],213:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -21293,7 +21843,7 @@ function onlyOnce(fn) {
     };
 }
 module.exports = exports['default'];
-},{}],210:[function(require,module,exports){
+},{}],214:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -21478,7 +22028,7 @@ function queue(worker, concurrency, payload) {
     return q;
 }
 module.exports = exports['default'];
-},{"./DoublyLinkedList":203,"./onlyOnce":209,"./setImmediate":211,"lodash/_arrayEach":214,"lodash/isArray":224,"lodash/noop":233,"lodash/rest":234}],211:[function(require,module,exports){
+},{"./DoublyLinkedList":207,"./onlyOnce":213,"./setImmediate":215,"lodash/_arrayEach":218,"lodash/isArray":228,"lodash/noop":237,"lodash/rest":238}],215:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -21522,7 +22072,7 @@ if (hasSetImmediate) {
 
 exports.default = wrap(_defer);
 }).call(this,require('_process'))
-},{"_process":4,"lodash/rest":234}],212:[function(require,module,exports){
+},{"_process":8,"lodash/rest":238}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -21535,7 +22085,7 @@ function _withoutIndex(iteratee) {
     };
 }
 module.exports = exports['default'];
-},{}],213:[function(require,module,exports){
+},{}],217:[function(require,module,exports){
 /**
  * A faster alternative to `Function#apply`, this function invokes `func`
  * with the `this` binding of `thisArg` and the arguments of `args`.
@@ -21558,7 +22108,7 @@ function apply(func, thisArg, args) {
 
 module.exports = apply;
 
-},{}],214:[function(require,module,exports){
+},{}],218:[function(require,module,exports){
 /**
  * A specialized version of `_.forEach` for arrays without support for
  * iteratee shorthands.
@@ -21582,7 +22132,7 @@ function arrayEach(array, iteratee) {
 
 module.exports = arrayEach;
 
-},{}],215:[function(require,module,exports){
+},{}],219:[function(require,module,exports){
 var baseTimes = require('./_baseTimes'),
     isArguments = require('./isArguments'),
     isArray = require('./isArray'),
@@ -21623,7 +22173,7 @@ function arrayLikeKeys(value, inherited) {
 
 module.exports = arrayLikeKeys;
 
-},{"./_baseTimes":218,"./_isIndex":219,"./isArguments":223,"./isArray":224}],216:[function(require,module,exports){
+},{"./_baseTimes":222,"./_isIndex":223,"./isArguments":227,"./isArray":228}],220:[function(require,module,exports){
 var isPrototype = require('./_isPrototype'),
     nativeKeys = require('./_nativeKeys');
 
@@ -21655,7 +22205,7 @@ function baseKeys(object) {
 
 module.exports = baseKeys;
 
-},{"./_isPrototype":220,"./_nativeKeys":221}],217:[function(require,module,exports){
+},{"./_isPrototype":224,"./_nativeKeys":225}],221:[function(require,module,exports){
 var apply = require('./_apply');
 
 /* Built-in method references for those with the same name as other `lodash` methods. */
@@ -21692,7 +22242,7 @@ function baseRest(func, start) {
 
 module.exports = baseRest;
 
-},{"./_apply":213}],218:[function(require,module,exports){
+},{"./_apply":217}],222:[function(require,module,exports){
 /**
  * The base implementation of `_.times` without support for iteratee shorthands
  * or max array length checks.
@@ -21714,7 +22264,7 @@ function baseTimes(n, iteratee) {
 
 module.exports = baseTimes;
 
-},{}],219:[function(require,module,exports){
+},{}],223:[function(require,module,exports){
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
 
@@ -21738,7 +22288,7 @@ function isIndex(value, length) {
 
 module.exports = isIndex;
 
-},{}],220:[function(require,module,exports){
+},{}],224:[function(require,module,exports){
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
 
@@ -21758,7 +22308,7 @@ function isPrototype(value) {
 
 module.exports = isPrototype;
 
-},{}],221:[function(require,module,exports){
+},{}],225:[function(require,module,exports){
 var overArg = require('./_overArg');
 
 /* Built-in method references for those with the same name as other `lodash` methods. */
@@ -21766,7 +22316,7 @@ var nativeKeys = overArg(Object.keys, Object);
 
 module.exports = nativeKeys;
 
-},{"./_overArg":222}],222:[function(require,module,exports){
+},{"./_overArg":226}],226:[function(require,module,exports){
 /**
  * Creates a unary function that invokes `func` with its argument transformed.
  *
@@ -21783,7 +22333,7 @@ function overArg(func, transform) {
 
 module.exports = overArg;
 
-},{}],223:[function(require,module,exports){
+},{}],227:[function(require,module,exports){
 var isArrayLikeObject = require('./isArrayLikeObject');
 
 /** `Object#toString` result references. */
@@ -21831,7 +22381,7 @@ function isArguments(value) {
 
 module.exports = isArguments;
 
-},{"./isArrayLikeObject":226}],224:[function(require,module,exports){
+},{"./isArrayLikeObject":230}],228:[function(require,module,exports){
 /**
  * Checks if `value` is classified as an `Array` object.
  *
@@ -21859,7 +22409,7 @@ var isArray = Array.isArray;
 
 module.exports = isArray;
 
-},{}],225:[function(require,module,exports){
+},{}],229:[function(require,module,exports){
 var isFunction = require('./isFunction'),
     isLength = require('./isLength');
 
@@ -21894,7 +22444,7 @@ function isArrayLike(value) {
 
 module.exports = isArrayLike;
 
-},{"./isFunction":227,"./isLength":228}],226:[function(require,module,exports){
+},{"./isFunction":231,"./isLength":232}],230:[function(require,module,exports){
 var isArrayLike = require('./isArrayLike'),
     isObjectLike = require('./isObjectLike');
 
@@ -21929,7 +22479,7 @@ function isArrayLikeObject(value) {
 
 module.exports = isArrayLikeObject;
 
-},{"./isArrayLike":225,"./isObjectLike":230}],227:[function(require,module,exports){
+},{"./isArrayLike":229,"./isObjectLike":234}],231:[function(require,module,exports){
 var isObject = require('./isObject');
 
 /** `Object#toString` result references. */
@@ -21972,7 +22522,7 @@ function isFunction(value) {
 
 module.exports = isFunction;
 
-},{"./isObject":229}],228:[function(require,module,exports){
+},{"./isObject":233}],232:[function(require,module,exports){
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
 
@@ -22009,7 +22559,7 @@ function isLength(value) {
 
 module.exports = isLength;
 
-},{}],229:[function(require,module,exports){
+},{}],233:[function(require,module,exports){
 /**
  * Checks if `value` is the
  * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
@@ -22042,7 +22592,7 @@ function isObject(value) {
 
 module.exports = isObject;
 
-},{}],230:[function(require,module,exports){
+},{}],234:[function(require,module,exports){
 /**
  * Checks if `value` is object-like. A value is object-like if it's not `null`
  * and has a `typeof` result of "object".
@@ -22073,7 +22623,7 @@ function isObjectLike(value) {
 
 module.exports = isObjectLike;
 
-},{}],231:[function(require,module,exports){
+},{}],235:[function(require,module,exports){
 var isObjectLike = require('./isObjectLike');
 
 /** `Object#toString` result references. */
@@ -22113,7 +22663,7 @@ function isSymbol(value) {
 
 module.exports = isSymbol;
 
-},{"./isObjectLike":230}],232:[function(require,module,exports){
+},{"./isObjectLike":234}],236:[function(require,module,exports){
 var arrayLikeKeys = require('./_arrayLikeKeys'),
     baseKeys = require('./_baseKeys'),
     isArrayLike = require('./isArrayLike');
@@ -22152,7 +22702,7 @@ function keys(object) {
 
 module.exports = keys;
 
-},{"./_arrayLikeKeys":215,"./_baseKeys":216,"./isArrayLike":225}],233:[function(require,module,exports){
+},{"./_arrayLikeKeys":219,"./_baseKeys":220,"./isArrayLike":229}],237:[function(require,module,exports){
 /**
  * This method returns `undefined`.
  *
@@ -22171,7 +22721,7 @@ function noop() {
 
 module.exports = noop;
 
-},{}],234:[function(require,module,exports){
+},{}],238:[function(require,module,exports){
 var baseRest = require('./_baseRest'),
     toInteger = require('./toInteger');
 
@@ -22213,7 +22763,7 @@ function rest(func, start) {
 
 module.exports = rest;
 
-},{"./_baseRest":217,"./toInteger":236}],235:[function(require,module,exports){
+},{"./_baseRest":221,"./toInteger":240}],239:[function(require,module,exports){
 var toNumber = require('./toNumber');
 
 /** Used as references for various `Number` constants. */
@@ -22257,7 +22807,7 @@ function toFinite(value) {
 
 module.exports = toFinite;
 
-},{"./toNumber":237}],236:[function(require,module,exports){
+},{"./toNumber":241}],240:[function(require,module,exports){
 var toFinite = require('./toFinite');
 
 /**
@@ -22295,7 +22845,7 @@ function toInteger(value) {
 
 module.exports = toInteger;
 
-},{"./toFinite":235}],237:[function(require,module,exports){
+},{"./toFinite":239}],241:[function(require,module,exports){
 var isObject = require('./isObject'),
     isSymbol = require('./isSymbol');
 
@@ -22363,7 +22913,7 @@ function toNumber(value) {
 
 module.exports = toNumber;
 
-},{"./isObject":229,"./isSymbol":231}],238:[function(require,module,exports){
+},{"./isObject":233,"./isSymbol":235}],242:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -22484,7 +23034,7 @@ module.exports = exports['default'];
  *     console.log('finished processing bar');
  * });
  */
-},{"./internal/queue":210}],239:[function(require,module,exports){
+},{"./internal/queue":214}],243:[function(require,module,exports){
 'use strict';
 
 var asyncQueue      = require('async/queue');
@@ -22979,7 +23529,7 @@ Loader.prototype._onLoad = function (resource) {
 Loader.LOAD_TYPE = Resource.LOAD_TYPE;
 Loader.XHR_RESPONSE_TYPE = Resource.XHR_RESPONSE_TYPE;
 
-},{"./Resource":240,"async/eachSeries":202,"async/queue":238,"eventemitter3":182,"url":9}],240:[function(require,module,exports){
+},{"./Resource":244,"async/eachSeries":206,"async/queue":242,"eventemitter3":186,"url":13}],244:[function(require,module,exports){
 'use strict';
 
 var EventEmitter    = require('eventemitter3');
@@ -23892,7 +24442,7 @@ function setExtMap(map, extname, val) {
     map[extname] = val;
 }
 
-},{"eventemitter3":182,"url":9}],241:[function(require,module,exports){
+},{"eventemitter3":186,"url":13}],245:[function(require,module,exports){
 /* eslint no-magic-numbers: 0 */
 'use strict';
 
@@ -23962,7 +24512,7 @@ module.exports = {
     }
 };
 
-},{}],242:[function(require,module,exports){
+},{}],246:[function(require,module,exports){
 /* eslint global-require: 0 */
 'use strict';
 
@@ -23978,7 +24528,7 @@ module.exports.middleware = {
 };
 
 
-},{"./Loader":239,"./Resource":240,"./middlewares/caching/memory":243,"./middlewares/parsing/blob":244}],243:[function(require,module,exports){
+},{"./Loader":243,"./Resource":244,"./middlewares/caching/memory":247,"./middlewares/parsing/blob":248}],247:[function(require,module,exports){
 'use strict';
 
 // a simple in-memory cache for resources
@@ -24002,7 +24552,7 @@ module.exports = function () {
     };
 };
 
-},{}],244:[function(require,module,exports){
+},{}],248:[function(require,module,exports){
 'use strict';
 
 var Resource = require('../../Resource');
@@ -24071,7 +24621,7 @@ module.exports = function () {
     };
 };
 
-},{"../../Resource":240,"../../b64":241}],245:[function(require,module,exports){
+},{"../../Resource":244,"../../b64":245}],249:[function(require,module,exports){
 var core = require('../core');
 var  Device = require('ismobilejs');
 
@@ -24528,7 +25078,7 @@ AccessibilityManager.prototype.destroy = function ()
 core.WebGLRenderer.registerPlugin('accessibility', AccessibilityManager);
 core.CanvasRenderer.registerPlugin('accessibility', AccessibilityManager);
 
-},{"../core":268,"./accessibleTarget":246,"ismobilejs":183}],246:[function(require,module,exports){
+},{"../core":272,"./accessibleTarget":250,"ismobilejs":187}],250:[function(require,module,exports){
 /**
  * Default property values of accessible objects
  * used by {@link PIXI.accessibility.AccessibilityManager}.
@@ -24587,7 +25137,7 @@ var accessibleTarget = {
 
 module.exports = accessibleTarget;
 
-},{}],247:[function(require,module,exports){
+},{}],251:[function(require,module,exports){
 /**
  * @file        Main export of the PIXI accessibility library
  * @author      Mat Groves <mat@goodboydigital.com>
@@ -24603,7 +25153,7 @@ module.exports = {
     AccessibilityManager: require('./AccessibilityManager')
 };
 
-},{"./AccessibilityManager":245,"./accessibleTarget":246}],248:[function(require,module,exports){
+},{"./AccessibilityManager":249,"./accessibleTarget":250}],252:[function(require,module,exports){
 var GLShader = require('pixi-gl-core').GLShader;
 var Const = require('./const');
 
@@ -24640,7 +25190,7 @@ Shader.prototype = Object.create(GLShader.prototype);
 Shader.prototype.constructor = Shader;
 module.exports = Shader;
 
-},{"./const":249,"pixi-gl-core":191}],249:[function(require,module,exports){
+},{"./const":253,"pixi-gl-core":195}],253:[function(require,module,exports){
 
 /**
  * Constant values used in pixi
@@ -25010,7 +25560,7 @@ var CONST = {
 
 module.exports = CONST;
 
-},{"./utils/maxRecommendedTextures":323}],250:[function(require,module,exports){
+},{"./utils/maxRecommendedTextures":327}],254:[function(require,module,exports){
 var math = require('../math'),
     Rectangle = math.Rectangle;
 
@@ -25235,7 +25785,7 @@ Bounds.prototype.addBounds = function(bounds)
     this.maxY = bounds.maxY > maxY ? bounds.maxY : maxY;
 };
 
-},{"../math":273}],251:[function(require,module,exports){
+},{"../math":277}],255:[function(require,module,exports){
 var utils = require('../utils'),
     DisplayObject = require('./DisplayObject');
 
@@ -25827,7 +26377,7 @@ Container.prototype.destroy = function (options)
     }
 };
 
-},{"../utils":322,"./DisplayObject":252}],252:[function(require,module,exports){
+},{"../utils":326,"./DisplayObject":256}],256:[function(require,module,exports){
 var EventEmitter = require('eventemitter3'),
     CONST = require('../const'),
     TransformStatic = require('./TransformStatic'),
@@ -26435,7 +26985,7 @@ DisplayObject.prototype.destroy = function ()
     this.interactiveChildren = false;
 };
 
-},{"../const":249,"../math":273,"./Bounds":250,"./Transform":253,"./TransformStatic":255,"eventemitter3":182}],253:[function(require,module,exports){
+},{"../const":253,"../math":277,"./Bounds":254,"./Transform":257,"./TransformStatic":259,"eventemitter3":186}],257:[function(require,module,exports){
 var math = require('../math'),
     TransformBase = require('./TransformBase');
 
@@ -26592,7 +27142,7 @@ Object.defineProperties(Transform.prototype, {
 
 module.exports = Transform;
 
-},{"../math":273,"./TransformBase":254}],254:[function(require,module,exports){
+},{"../math":277,"./TransformBase":258}],258:[function(require,module,exports){
 var math = require('../math');
 
 
@@ -26662,7 +27212,7 @@ TransformBase.IDENTITY = new TransformBase();
 
 module.exports = TransformBase;
 
-},{"../math":273}],255:[function(require,module,exports){
+},{"../math":277}],259:[function(require,module,exports){
 var math = require('../math'),
     TransformBase = require('./TransformBase');
 
@@ -26847,7 +27397,7 @@ Object.defineProperties(TransformStatic.prototype, {
 
 module.exports = TransformStatic;
 
-},{"../math":273,"./TransformBase":254}],256:[function(require,module,exports){
+},{"../math":277,"./TransformBase":258}],260:[function(require,module,exports){
 var Container = require('../display/Container'),
     RenderTexture = require('../textures/RenderTexture'),
     Texture = require('../textures/Texture'),
@@ -27903,7 +28453,7 @@ Graphics.prototype.destroy = function ()
     this._localBounds = null;
 };
 
-},{"../const":249,"../display/Bounds":250,"../display/Container":251,"../math":273,"../renderers/canvas/CanvasRenderer":280,"../sprites/Sprite":304,"../textures/RenderTexture":314,"../textures/Texture":315,"../utils":322,"./GraphicsData":257,"./utils/bezierCurveTo":259}],257:[function(require,module,exports){
+},{"../const":253,"../display/Bounds":254,"../display/Container":255,"../math":277,"../renderers/canvas/CanvasRenderer":284,"../sprites/Sprite":308,"../textures/RenderTexture":318,"../textures/Texture":319,"../utils":326,"./GraphicsData":261,"./utils/bezierCurveTo":263}],261:[function(require,module,exports){
 /**
  * A GraphicsData object.
  *
@@ -28010,7 +28560,7 @@ GraphicsData.prototype.destroy = function () {
     this.holes = null;
 };
 
-},{}],258:[function(require,module,exports){
+},{}],262:[function(require,module,exports){
 var CanvasRenderer = require('../../renderers/canvas/CanvasRenderer'),
     CONST = require('../../const');
 
@@ -28288,7 +28838,7 @@ CanvasGraphicsRenderer.prototype.destroy = function ()
   this.renderer = null;
 };
 
-},{"../../const":249,"../../renderers/canvas/CanvasRenderer":280}],259:[function(require,module,exports){
+},{"../../const":253,"../../renderers/canvas/CanvasRenderer":284}],263:[function(require,module,exports){
 
 /**
  * Calculate the points for a bezier curve and then draws it.
@@ -28342,7 +28892,7 @@ var bezierCurveTo = function (fromX, fromY, cpX, cpY, cpX2, cpY2, toX, toY, path
 
 module.exports = bezierCurveTo;
 
-},{}],260:[function(require,module,exports){
+},{}],264:[function(require,module,exports){
 var utils = require('../../utils'),
     CONST = require('../../const'),
     ObjectRenderer = require('../../renderers/webgl/utils/ObjectRenderer'),
@@ -28567,7 +29117,7 @@ GraphicsRenderer.prototype.getWebGLData = function (webGL, type)
     return webGLData;
 };
 
-},{"../../const":249,"../../renderers/webgl/WebGLRenderer":287,"../../renderers/webgl/utils/ObjectRenderer":297,"../../utils":322,"./WebGLGraphicsData":261,"./shaders/PrimitiveShader":262,"./utils/buildCircle":263,"./utils/buildPoly":265,"./utils/buildRectangle":266,"./utils/buildRoundedRectangle":267}],261:[function(require,module,exports){
+},{"../../const":253,"../../renderers/webgl/WebGLRenderer":291,"../../renderers/webgl/utils/ObjectRenderer":301,"../../utils":326,"./WebGLGraphicsData":265,"./shaders/PrimitiveShader":266,"./utils/buildCircle":267,"./utils/buildPoly":269,"./utils/buildRectangle":270,"./utils/buildRoundedRectangle":271}],265:[function(require,module,exports){
 var glCore = require('pixi-gl-core');
 
 
@@ -28694,7 +29244,7 @@ WebGLGraphicsData.prototype.destroy = function ()
     this.glIndices = null;
 };
 
-},{"pixi-gl-core":191}],262:[function(require,module,exports){
+},{"pixi-gl-core":195}],266:[function(require,module,exports){
 var Shader = require('../../../Shader');
 
 /**
@@ -28743,7 +29293,7 @@ PrimitiveShader.prototype.constructor = PrimitiveShader;
 
 module.exports = PrimitiveShader;
 
-},{"../../../Shader":248}],263:[function(require,module,exports){
+},{"../../../Shader":252}],267:[function(require,module,exports){
 var buildLine = require('./buildLine'),
     CONST = require('../../../const'),
     utils = require('../../../utils');
@@ -28835,7 +29385,7 @@ var buildCircle = function (graphicsData, webGLData)
 
 module.exports = buildCircle;
 
-},{"../../../const":249,"../../../utils":322,"./buildLine":264}],264:[function(require,module,exports){
+},{"../../../const":253,"../../../utils":326,"./buildLine":268}],268:[function(require,module,exports){
 var math = require('../../../math'),
     utils = require('../../../utils');
 
@@ -29059,7 +29609,7 @@ var buildLine = function (graphicsData, webGLData)
 
 module.exports = buildLine;
 
-},{"../../../math":273,"../../../utils":322}],265:[function(require,module,exports){
+},{"../../../math":277,"../../../utils":326}],269:[function(require,module,exports){
 var buildLine = require('./buildLine'),
     utils = require('../../../utils'),
     earcut = require('earcut');
@@ -29140,7 +29690,7 @@ var buildPoly = function (graphicsData, webGLData)
 
 module.exports = buildPoly;
 
-},{"../../../utils":322,"./buildLine":264,"earcut":181}],266:[function(require,module,exports){
+},{"../../../utils":326,"./buildLine":268,"earcut":185}],270:[function(require,module,exports){
 var buildLine = require('./buildLine'),
     utils = require('../../../utils');
 
@@ -29215,7 +29765,7 @@ var buildRectangle = function (graphicsData, webGLData)
 
 module.exports = buildRectangle;
 
-},{"../../../utils":322,"./buildLine":264}],267:[function(require,module,exports){
+},{"../../../utils":326,"./buildLine":268}],271:[function(require,module,exports){
 var earcut = require('earcut'),
     buildLine = require('./buildLine'),
     utils = require('../../../utils');
@@ -29351,7 +29901,7 @@ var quadraticBezierCurve = function (fromX, fromY, cpX, cpY, toX, toY, out)// js
 
 module.exports = buildRoundedRectangle;
 
-},{"../../../utils":322,"./buildLine":264,"earcut":181}],268:[function(require,module,exports){
+},{"../../../utils":326,"./buildLine":268,"earcut":185}],272:[function(require,module,exports){
 /**
  * @file        Main export of the PIXI core library
  * @author      Mat Groves <mat@goodboydigital.com>
@@ -29449,7 +29999,7 @@ var core = module.exports = Object.assign(require('./const'), require('./math'),
     }
 });
 
-},{"./Shader":248,"./const":249,"./display/Container":251,"./display/DisplayObject":252,"./display/Transform":253,"./display/TransformBase":254,"./display/TransformStatic":255,"./graphics/Graphics":256,"./graphics/GraphicsData":257,"./graphics/canvas/CanvasGraphicsRenderer":258,"./graphics/webgl/GraphicsRenderer":260,"./math":273,"./renderers/canvas/CanvasRenderer":280,"./renderers/canvas/utils/CanvasRenderTarget":282,"./renderers/webgl/WebGLRenderer":287,"./renderers/webgl/filters/Filter":289,"./renderers/webgl/filters/spriteMask/SpriteMaskFilter":292,"./renderers/webgl/managers/WebGLManager":296,"./renderers/webgl/utils/ObjectRenderer":297,"./renderers/webgl/utils/Quad":298,"./renderers/webgl/utils/RenderTarget":299,"./sprites/Sprite":304,"./sprites/canvas/CanvasSpriteRenderer":305,"./sprites/canvas/CanvasTinter":306,"./sprites/webgl/SpriteRenderer":308,"./text/Text":310,"./text/TextStyle":311,"./textures/BaseRenderTexture":312,"./textures/BaseTexture":313,"./textures/RenderTexture":314,"./textures/Texture":315,"./textures/TextureUvs":316,"./textures/VideoBaseTexture":317,"./ticker":319,"./utils":322,"pixi-gl-core":191}],269:[function(require,module,exports){
+},{"./Shader":252,"./const":253,"./display/Container":255,"./display/DisplayObject":256,"./display/Transform":257,"./display/TransformBase":258,"./display/TransformStatic":259,"./graphics/Graphics":260,"./graphics/GraphicsData":261,"./graphics/canvas/CanvasGraphicsRenderer":262,"./graphics/webgl/GraphicsRenderer":264,"./math":277,"./renderers/canvas/CanvasRenderer":284,"./renderers/canvas/utils/CanvasRenderTarget":286,"./renderers/webgl/WebGLRenderer":291,"./renderers/webgl/filters/Filter":293,"./renderers/webgl/filters/spriteMask/SpriteMaskFilter":296,"./renderers/webgl/managers/WebGLManager":300,"./renderers/webgl/utils/ObjectRenderer":301,"./renderers/webgl/utils/Quad":302,"./renderers/webgl/utils/RenderTarget":303,"./sprites/Sprite":308,"./sprites/canvas/CanvasSpriteRenderer":309,"./sprites/canvas/CanvasTinter":310,"./sprites/webgl/SpriteRenderer":312,"./text/Text":314,"./text/TextStyle":315,"./textures/BaseRenderTexture":316,"./textures/BaseTexture":317,"./textures/RenderTexture":318,"./textures/Texture":319,"./textures/TextureUvs":320,"./textures/VideoBaseTexture":321,"./ticker":323,"./utils":326,"pixi-gl-core":195}],273:[function(require,module,exports){
 // Your friendly neighbour https://en.wikipedia.org/wiki/Dihedral_group of order 16
 
 var ux = [1, 1, 0, -1, -1, -1, 0, 1, 1, 1, 0, -1, -1, -1, 0, 1];
@@ -29613,7 +30163,7 @@ var GroupD8 = {
 
 module.exports = GroupD8;
 
-},{"./Matrix":270}],270:[function(require,module,exports){
+},{"./Matrix":274}],274:[function(require,module,exports){
 // @todo - ignore the too many parameters warning for now
 // should either fix it or change the jshint config
 // jshint -W072
@@ -30103,7 +30653,7 @@ Matrix.IDENTITY = new Matrix();
  */
 Matrix.TEMP_MATRIX = new Matrix();
 
-},{"./Point":272}],271:[function(require,module,exports){
+},{"./Point":276}],275:[function(require,module,exports){
 /**
  * The Point object represents a location in a two-dimensional coordinate system, where x represents
  * the horizontal axis and y represents the vertical axis.
@@ -30205,7 +30755,7 @@ ObservablePoint.prototype.copy = function (point)
     }
 };
 
-},{}],272:[function(require,module,exports){
+},{}],276:[function(require,module,exports){
 /**
  * The Point object represents a location in a two-dimensional coordinate system, where x represents
  * the horizontal axis and y represents the vertical axis.
@@ -30275,7 +30825,7 @@ Point.prototype.set = function (x, y)
     this.y = y || ( (y !== 0) ? this.x : 0 ) ;
 };
 
-},{}],273:[function(require,module,exports){
+},{}],277:[function(require,module,exports){
 /**
  * Math classes and utilities mixed into PIXI namespace.
  *
@@ -30299,7 +30849,7 @@ module.exports = {
     RoundedRectangle:   require('./shapes/RoundedRectangle')
 };
 
-},{"./GroupD8":269,"./Matrix":270,"./ObservablePoint":271,"./Point":272,"./shapes/Circle":274,"./shapes/Ellipse":275,"./shapes/Polygon":276,"./shapes/Rectangle":277,"./shapes/RoundedRectangle":278}],274:[function(require,module,exports){
+},{"./GroupD8":273,"./Matrix":274,"./ObservablePoint":275,"./Point":276,"./shapes/Circle":278,"./shapes/Ellipse":279,"./shapes/Polygon":280,"./shapes/Rectangle":281,"./shapes/RoundedRectangle":282}],278:[function(require,module,exports){
 var Rectangle = require('./Rectangle'),
     CONST = require('../../const');
 
@@ -30390,7 +30940,7 @@ Circle.prototype.getBounds = function ()
     return new Rectangle(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
 };
 
-},{"../../const":249,"./Rectangle":277}],275:[function(require,module,exports){
+},{"../../const":253,"./Rectangle":281}],279:[function(require,module,exports){
 var Rectangle = require('./Rectangle'),
     CONST = require('../../const');
 
@@ -30488,7 +31038,7 @@ Ellipse.prototype.getBounds = function ()
     return new Rectangle(this.x - this.width, this.y - this.height, this.width, this.height);
 };
 
-},{"../../const":249,"./Rectangle":277}],276:[function(require,module,exports){
+},{"../../const":253,"./Rectangle":281}],280:[function(require,module,exports){
 var Point = require('../Point'),
     CONST = require('../../const');
 
@@ -30606,7 +31156,7 @@ Polygon.prototype.contains = function (x, y)
     return inside;
 };
 
-},{"../../const":249,"../Point":272}],277:[function(require,module,exports){
+},{"../../const":253,"../Point":276}],281:[function(require,module,exports){
 var CONST = require('../../const');
 
 /**
@@ -30781,7 +31331,7 @@ Rectangle.prototype.enlarge = function (rect)
     this.height = y2 - y1;
 };
 
-},{"../../const":249}],278:[function(require,module,exports){
+},{"../../const":253}],282:[function(require,module,exports){
 var CONST = require('../../const');
 
 /**
@@ -30876,7 +31426,7 @@ RoundedRectangle.prototype.contains = function (x, y)
     return false;
 };
 
-},{"../../const":249}],279:[function(require,module,exports){
+},{"../../const":253}],283:[function(require,module,exports){
 var utils = require('../utils'),
     math = require('../math'),
     CONST = require('../const'),
@@ -31166,7 +31716,7 @@ SystemRenderer.prototype.destroy = function (removeView) {
     this._lastObjectRendered = null;
 };
 
-},{"../const":249,"../display/Container":251,"../math":273,"../textures/RenderTexture":314,"../utils":322,"eventemitter3":182}],280:[function(require,module,exports){
+},{"../const":253,"../display/Container":255,"../math":277,"../textures/RenderTexture":318,"../utils":326,"eventemitter3":186}],284:[function(require,module,exports){
 var SystemRenderer = require('../SystemRenderer'),
     CanvasMaskManager = require('./utils/CanvasMaskManager'),
     CanvasRenderTarget = require('./utils/CanvasRenderTarget'),
@@ -31431,7 +31981,7 @@ CanvasRenderer.prototype.resize = function (width, height)
 
 };
 
-},{"../../const":249,"../../utils":322,"../SystemRenderer":279,"./utils/CanvasMaskManager":281,"./utils/CanvasRenderTarget":282,"./utils/mapCanvasBlendModesToPixi":284}],281:[function(require,module,exports){
+},{"../../const":253,"../../utils":326,"../SystemRenderer":283,"./utils/CanvasMaskManager":285,"./utils/CanvasRenderTarget":286,"./utils/mapCanvasBlendModesToPixi":288}],285:[function(require,module,exports){
 var CONST = require('../../../const');
 /**
  * A set of functions used to handle masking.
@@ -31593,7 +32143,7 @@ CanvasMaskManager.prototype.popMask = function (renderer)
 
 CanvasMaskManager.prototype.destroy = function () {};
 
-},{"../../../const":249}],282:[function(require,module,exports){
+},{"../../../const":253}],286:[function(require,module,exports){
 var CONST = require('../../../const');
 
 /**
@@ -31698,7 +32248,7 @@ CanvasRenderTarget.prototype.destroy = function ()
     this.canvas = null;
 };
 
-},{"../../../const":249}],283:[function(require,module,exports){
+},{"../../../const":253}],287:[function(require,module,exports){
 
 
 /**
@@ -31757,7 +32307,7 @@ var canUseNewCanvasBlendModes = function ()
 
 module.exports = canUseNewCanvasBlendModes;
 
-},{}],284:[function(require,module,exports){
+},{}],288:[function(require,module,exports){
 var CONST = require('../../../const'),
 canUseNewCanvasBlendModes = require('./canUseNewCanvasBlendModes');
 
@@ -31818,7 +32368,7 @@ function mapCanvasBlendModesToPixi(array)
 
 module.exports = mapCanvasBlendModesToPixi;
 
-},{"../../../const":249,"./canUseNewCanvasBlendModes":283}],285:[function(require,module,exports){
+},{"../../../const":253,"./canUseNewCanvasBlendModes":287}],289:[function(require,module,exports){
 
 var CONST = require('../../const');
 
@@ -31929,7 +32479,7 @@ TextureGarbageCollector.prototype.unload = function( displayObject )
     }
 };
 
-},{"../../const":249}],286:[function(require,module,exports){
+},{"../../const":253}],290:[function(require,module,exports){
 var GLTexture = require('pixi-gl-core').GLTexture,
     CONST = require('../../const'),
     RenderTarget = require('./utils/RenderTarget'),
@@ -32136,7 +32686,7 @@ TextureManager.prototype.destroy = function()
 
 module.exports = TextureManager;
 
-},{"../../const":249,"../../utils":322,"./utils/RenderTarget":299,"pixi-gl-core":191}],287:[function(require,module,exports){
+},{"../../const":253,"../../utils":326,"./utils/RenderTarget":303,"pixi-gl-core":195}],291:[function(require,module,exports){
 var SystemRenderer = require('../SystemRenderer'),
     MaskManager = require('./managers/MaskManager'),
     StencilManager = require('./managers/StencilManager'),
@@ -32700,7 +33250,7 @@ WebGLRenderer.prototype.destroy = function (removeView)
     // this = null;
 };
 
-},{"../../const":249,"../../utils":322,"../SystemRenderer":279,"./TextureGarbageCollector":285,"./TextureManager":286,"./WebGLState":288,"./managers/FilterManager":293,"./managers/MaskManager":294,"./managers/StencilManager":295,"./utils/ObjectRenderer":297,"./utils/RenderTarget":299,"./utils/mapWebGLDrawModesToPixi":302,"./utils/validateContext":303,"pixi-gl-core":191}],288:[function(require,module,exports){
+},{"../../const":253,"../../utils":326,"../SystemRenderer":283,"./TextureGarbageCollector":289,"./TextureManager":290,"./WebGLState":292,"./managers/FilterManager":297,"./managers/MaskManager":298,"./managers/StencilManager":299,"./utils/ObjectRenderer":301,"./utils/RenderTarget":303,"./utils/mapWebGLDrawModesToPixi":306,"./utils/validateContext":307,"pixi-gl-core":195}],292:[function(require,module,exports){
 var mapWebGLBlendModesToPixi = require('./utils/mapWebGLBlendModesToPixi');
 
 /**
@@ -32983,7 +33533,7 @@ WebGLState.prototype.resetToDefault = function()
 
 module.exports = WebGLState;
 
-},{"./utils/mapWebGLBlendModesToPixi":301}],289:[function(require,module,exports){
+},{"./utils/mapWebGLBlendModesToPixi":305}],293:[function(require,module,exports){
 var extractUniformsFromSrc = require('./extractUniformsFromSrc'),
     utils = require('../../../utils'),
     CONST = require('../../../const'),
@@ -33130,7 +33680,7 @@ Filter.defaultFragmentSrc = [
     '}'
 ].join('\n');
 
-},{"../../../const":249,"../../../utils":322,"./extractUniformsFromSrc":290}],290:[function(require,module,exports){
+},{"../../../const":253,"../../../utils":326,"./extractUniformsFromSrc":294}],294:[function(require,module,exports){
 var defaultValue = require('pixi-gl-core').shader.defaultValue;
 
 function extractUniformsFromSrc(vertexSrc, fragmentSrc, mask)
@@ -33192,7 +33742,7 @@ function extractUniformsFromString(string)
 
 module.exports = extractUniformsFromSrc;
 
-},{"pixi-gl-core":191}],291:[function(require,module,exports){
+},{"pixi-gl-core":195}],295:[function(require,module,exports){
 var math = require('../../../math');
 
 /*
@@ -33277,7 +33827,7 @@ module.exports = {
     calculateSpriteMatrix:calculateSpriteMatrix
 };
 
-},{"../../../math":273}],292:[function(require,module,exports){
+},{"../../../math":277}],296:[function(require,module,exports){
 var Filter = require('../Filter'),
     math =  require('../../../../math');
 
@@ -33328,7 +33878,7 @@ SpriteMaskFilter.prototype.apply = function (filterManager, input, output)
     filterManager.applyFilter(this, input, output);
 };
 
-},{"../../../../math":273,"../Filter":289}],293:[function(require,module,exports){
+},{"../../../../math":277,"../Filter":293}],297:[function(require,module,exports){
 
 var WebGLManager = require('./WebGLManager'),
     RenderTarget = require('../utils/RenderTarget'),
@@ -33769,7 +34319,7 @@ FilterManager.prototype.freePotRenderTarget = function(renderTarget)
     this.pool[key].push(renderTarget);
 };
 
-},{"../../../Shader":248,"../../../math":273,"../filters/filterTransforms":291,"../utils/Quad":298,"../utils/RenderTarget":299,"./WebGLManager":296,"bit-twiddle":180}],294:[function(require,module,exports){
+},{"../../../Shader":252,"../../../math":277,"../filters/filterTransforms":295,"../utils/Quad":302,"../utils/RenderTarget":303,"./WebGLManager":300,"bit-twiddle":184}],298:[function(require,module,exports){
 var WebGLManager = require('./WebGLManager'),
     AlphaMaskFilter = require('../filters/spriteMask/SpriteMaskFilter');
 
@@ -33964,7 +34514,7 @@ MaskManager.prototype.popScissorMask = function ()
     gl.disable(gl.SCISSOR_TEST);
 };
 
-},{"../filters/spriteMask/SpriteMaskFilter":292,"./WebGLManager":296}],295:[function(require,module,exports){
+},{"../filters/spriteMask/SpriteMaskFilter":296,"./WebGLManager":300}],299:[function(require,module,exports){
 var WebGLManager = require('./WebGLManager');
 
 /**
@@ -34077,7 +34627,7 @@ StencilManager.prototype.destroy = function ()
     this.stencilMaskStack.stencilStack = null;
 };
 
-},{"./WebGLManager":296}],296:[function(require,module,exports){
+},{"./WebGLManager":300}],300:[function(require,module,exports){
 /**
  * @class
  * @memberof PIXI
@@ -34118,7 +34668,7 @@ WebGLManager.prototype.destroy = function ()
     this.renderer = null;
 };
 
-},{}],297:[function(require,module,exports){
+},{}],301:[function(require,module,exports){
 var WebGLManager = require('../managers/WebGLManager');
 
 /**
@@ -34176,7 +34726,7 @@ ObjectRenderer.prototype.render = function (object) // jshint unused:false
     // render the object
 };
 
-},{"../managers/WebGLManager":296}],298:[function(require,module,exports){
+},{"../managers/WebGLManager":300}],302:[function(require,module,exports){
 var glCore = require('pixi-gl-core'),
     createIndicesForQuads = require('../../../utils/createIndicesForQuads');
 
@@ -34349,7 +34899,7 @@ Quad.prototype.destroy = function()
 
 module.exports = Quad;
 
-},{"../../../utils/createIndicesForQuads":320,"pixi-gl-core":191}],299:[function(require,module,exports){
+},{"../../../utils/createIndicesForQuads":324,"pixi-gl-core":195}],303:[function(require,module,exports){
 var math = require('../../../math'),
     CONST = require('../../../const'),
     GLFramebuffer = require('pixi-gl-core').GLFramebuffer;
@@ -34669,7 +35219,7 @@ RenderTarget.prototype.destroy = function ()
     this.texture = null;
 };
 
-},{"../../../const":249,"../../../math":273,"pixi-gl-core":191}],300:[function(require,module,exports){
+},{"../../../const":253,"../../../math":277,"pixi-gl-core":195}],304:[function(require,module,exports){
 var glCore = require('pixi-gl-core');
 
 var fragTemplate = [
@@ -34750,7 +35300,7 @@ function generateIfTestSrc(maxIfs)
 
 module.exports = checkMaxIfStatmentsInShader;
 
-},{"pixi-gl-core":191}],301:[function(require,module,exports){
+},{"pixi-gl-core":195}],305:[function(require,module,exports){
 var CONST = require('../../../const');
 
 /**
@@ -34789,7 +35339,7 @@ function mapWebGLBlendModesToPixi(gl, array)
 
 module.exports = mapWebGLBlendModesToPixi;
 
-},{"../../../const":249}],302:[function(require,module,exports){
+},{"../../../const":253}],306:[function(require,module,exports){
 var CONST = require('../../../const');
 
 /**
@@ -34815,7 +35365,7 @@ function mapWebGLDrawModesToPixi(gl, object)
 
 module.exports = mapWebGLDrawModesToPixi;
 
-},{"../../../const":249}],303:[function(require,module,exports){
+},{"../../../const":253}],307:[function(require,module,exports){
 
 
 function validateContext(gl)
@@ -34831,7 +35381,7 @@ function validateContext(gl)
 
 module.exports = validateContext;
 
-},{}],304:[function(require,module,exports){
+},{}],308:[function(require,module,exports){
 var math = require('../math'),
     Texture = require('../textures/Texture'),
     Container = require('../display/Container'),
@@ -35357,7 +35907,7 @@ Sprite.fromImage = function (imageId, crossorigin, scaleMode)
     return new Sprite(Texture.fromImage(imageId, crossorigin, scaleMode));
 };
 
-},{"../const":249,"../display/Container":251,"../math":273,"../textures/Texture":315,"../utils":322}],305:[function(require,module,exports){
+},{"../const":253,"../display/Container":255,"../math":277,"../textures/Texture":319,"../utils":326}],309:[function(require,module,exports){
 var CanvasRenderer = require('../../renderers/canvas/CanvasRenderer'),
     CONST = require('../../const'),
     math = require('../../math'),
@@ -35523,7 +36073,7 @@ CanvasSpriteRenderer.prototype.destroy = function (){
   this.renderer = null;
 };
 
-},{"../../const":249,"../../math":273,"../../renderers/canvas/CanvasRenderer":280,"./CanvasTinter":306}],306:[function(require,module,exports){
+},{"../../const":253,"../../math":277,"../../renderers/canvas/CanvasRenderer":284,"./CanvasTinter":310}],310:[function(require,module,exports){
 var utils = require('../../utils'),
     canUseNewCanvasBlendModes = require('../../renderers/canvas/utils/canUseNewCanvasBlendModes');
 
@@ -35793,7 +36343,7 @@ CanvasTinter.tintMethod = CanvasTinter.canUseMultiply ? CanvasTinter.tintWithMul
  * @param canvas {HTMLCanvasElement} the current canvas
  */
 
-},{"../../renderers/canvas/utils/canUseNewCanvasBlendModes":283,"../../utils":322}],307:[function(require,module,exports){
+},{"../../renderers/canvas/utils/canUseNewCanvasBlendModes":287,"../../utils":326}],311:[function(require,module,exports){
 
 
  var Buffer = function(size)
@@ -35824,7 +36374,7 @@ CanvasTinter.tintMethod = CanvasTinter.canUseMultiply ? CanvasTinter.tintWithMul
    this.uvs = null;
    this.colors  = null;
  };
-},{}],308:[function(require,module,exports){
+},{}],312:[function(require,module,exports){
 var ObjectRenderer = require('../../renderers/webgl/utils/ObjectRenderer'),
     WebGLRenderer = require('../../renderers/webgl/WebGLRenderer'),
     createIndicesForQuads = require('../../utils/createIndicesForQuads'),
@@ -36247,7 +36797,7 @@ SpriteRenderer.prototype.destroy = function ()
 
 };
 
-},{"../../const":249,"../../renderers/webgl/WebGLRenderer":287,"../../renderers/webgl/utils/ObjectRenderer":297,"../../renderers/webgl/utils/checkMaxIfStatmentsInShader":300,"../../utils/createIndicesForQuads":320,"./BatchBuffer":307,"./generateMultiTextureShader":309,"bit-twiddle":180,"pixi-gl-core":191}],309:[function(require,module,exports){
+},{"../../const":253,"../../renderers/webgl/WebGLRenderer":291,"../../renderers/webgl/utils/ObjectRenderer":301,"../../renderers/webgl/utils/checkMaxIfStatmentsInShader":304,"../../utils/createIndicesForQuads":324,"./BatchBuffer":311,"./generateMultiTextureShader":313,"bit-twiddle":184,"pixi-gl-core":195}],313:[function(require,module,exports){
 var Shader = require('../../Shader');
 
 
@@ -36321,7 +36871,7 @@ function generateSampleSrc(maxTextures)
 
 module.exports = generateMultiTextureShader;
 
-},{"../../Shader":248}],310:[function(require,module,exports){
+},{"../../Shader":252}],314:[function(require,module,exports){
 var Sprite = require('../sprites/Sprite'),
     Texture = require('../textures/Texture'),
     math = require('../math'),
@@ -37095,7 +37645,7 @@ Text.prototype.destroy = function (options)
     this._style = null;
 };
 
-},{"../const":249,"../math":273,"../sprites/Sprite":304,"../textures/Texture":315,"../utils":322,"./TextStyle":311}],311:[function(require,module,exports){
+},{"../const":253,"../math":277,"../sprites/Sprite":308,"../textures/Texture":319,"../utils":326,"./TextStyle":315}],315:[function(require,module,exports){
 var CONST = require('../const'),
     utils = require('../utils');
 
@@ -37589,7 +38139,7 @@ function getColor(color)
     return color;
 }
 
-},{"../const":249,"../utils":322}],312:[function(require,module,exports){
+},{"../const":253,"../utils":326}],316:[function(require,module,exports){
 var BaseTexture = require('./BaseTexture'),
     CONST = require('../const');
 
@@ -37722,7 +38272,7 @@ BaseRenderTexture.prototype.destroy = function ()
 };
 
 
-},{"../const":249,"./BaseTexture":313}],313:[function(require,module,exports){
+},{"../const":253,"./BaseTexture":317}],317:[function(require,module,exports){
 var utils = require('../utils'),
     CONST = require('../const'),
     EventEmitter = require('eventemitter3'),
@@ -38172,7 +38722,7 @@ BaseTexture.fromCanvas = function (canvas, scaleMode)
     return baseTexture;
 };
 
-},{"../const":249,"../utils":322,"../utils/determineCrossOrigin":321,"bit-twiddle":180,"eventemitter3":182}],314:[function(require,module,exports){
+},{"../const":253,"../utils":326,"../utils/determineCrossOrigin":325,"bit-twiddle":184,"eventemitter3":186}],318:[function(require,module,exports){
 var BaseRenderTexture = require('./BaseRenderTexture'),
     Texture = require('./Texture');
 
@@ -38296,7 +38846,7 @@ RenderTexture.create = function(width, height, scaleMode, resolution)
     return new RenderTexture(new BaseRenderTexture(width, height, scaleMode, resolution));
 };
 
-},{"./BaseRenderTexture":312,"./Texture":315}],315:[function(require,module,exports){
+},{"./BaseRenderTexture":316,"./Texture":319}],319:[function(require,module,exports){
 var BaseTexture = require('./BaseTexture'),
     VideoBaseTexture = require('./VideoBaseTexture'),
     TextureUvs = require('./TextureUvs'),
@@ -38820,7 +39370,7 @@ Texture.EMPTY.once = function() {};
 Texture.EMPTY.emit = function() {};
 
 
-},{"../math":273,"../utils":322,"./BaseTexture":313,"./TextureUvs":316,"./VideoBaseTexture":317,"eventemitter3":182}],316:[function(require,module,exports){
+},{"../math":277,"../utils":326,"./BaseTexture":317,"./TextureUvs":320,"./VideoBaseTexture":321,"eventemitter3":186}],320:[function(require,module,exports){
 
 /**
  * A standard object to store the Uvs of a texture
@@ -38905,7 +39455,7 @@ TextureUvs.prototype.set = function (frame, baseFrame, rotate)
     this.uvsUint32[3] = (((this.y3 * 65535) & 0xFFFF) << 16) | ((this.x3 * 65535) & 0xFFFF);
 };
 
-},{"../math/GroupD8":269}],317:[function(require,module,exports){
+},{"../math/GroupD8":273}],321:[function(require,module,exports){
 var BaseTexture = require('./BaseTexture'),
     utils = require('../utils');
 
@@ -39148,7 +39698,7 @@ function createSource(path, type)
     return source;
 }
 
-},{"../utils":322,"./BaseTexture":313}],318:[function(require,module,exports){
+},{"../utils":326,"./BaseTexture":317}],322:[function(require,module,exports){
 var CONST = require('../const'),
     EventEmitter = require('eventemitter3'),
     // Internal event used by composed emitter
@@ -39524,7 +40074,7 @@ Ticker.prototype.update = function update(currentTime)
 
 module.exports = Ticker;
 
-},{"../const":249,"eventemitter3":182}],319:[function(require,module,exports){
+},{"../const":253,"eventemitter3":186}],323:[function(require,module,exports){
 var Ticker = require('./Ticker');
 
 /**
@@ -39580,7 +40130,7 @@ module.exports = {
     Ticker: Ticker
 };
 
-},{"./Ticker":318}],320:[function(require,module,exports){
+},{"./Ticker":322}],324:[function(require,module,exports){
 /**
  * Generic Mask Stack data structure
  * @class
@@ -39612,7 +40162,7 @@ var createIndicesForQuads = function (size)
 
 module.exports = createIndicesForQuads;
 
-},{}],321:[function(require,module,exports){
+},{}],325:[function(require,module,exports){
 var tempAnchor;
 var _url = require('url');
 
@@ -39657,7 +40207,7 @@ var determineCrossOrigin = function (url, loc) {
 
 module.exports = determineCrossOrigin;
 
-},{"url":9}],322:[function(require,module,exports){
+},{"url":13}],326:[function(require,module,exports){
 var CONST = require('../const');
 
 /**
@@ -39885,7 +40435,7 @@ var utils = module.exports = {
     BaseTextureCache: {}
 };
 
-},{"../const":249,"./pluginTarget":324,"eventemitter3":182}],323:[function(require,module,exports){
+},{"../const":253,"./pluginTarget":328,"eventemitter3":186}],327:[function(require,module,exports){
 
 
 var  Device = require('ismobilejs');
@@ -39906,7 +40456,7 @@ var maxRecommendedTextures = function(max)
 };
 
 module.exports = maxRecommendedTextures;
-},{"ismobilejs":183}],324:[function(require,module,exports){
+},{"ismobilejs":187}],328:[function(require,module,exports){
 /**
  * Mixins functionality to make an object have "plugins".
  *
@@ -39976,7 +40526,7 @@ module.exports = {
     }
 };
 
-},{}],325:[function(require,module,exports){
+},{}],329:[function(require,module,exports){
 /*global console */
 var core = require('./core'),
     mesh = require('./mesh'),
@@ -40599,7 +41149,7 @@ core.utils.canUseNewCanvasBlendModes = function() {
     // @endif
     return core.CanvasTinter.canUseMultiply;
 };
-},{"./core":268,"./extras":335,"./filters":346,"./mesh":363,"./particles":366}],326:[function(require,module,exports){
+},{"./core":272,"./extras":339,"./filters":350,"./mesh":367,"./particles":370}],330:[function(require,module,exports){
 var core = require('../../core'),
     tempRect = new core.Rectangle();
 
@@ -40751,13 +41301,13 @@ CanvasExtract.prototype.destroy = function ()
 
 core.CanvasRenderer.registerPlugin('extract', CanvasExtract);
 
-},{"../../core":268}],327:[function(require,module,exports){
+},{"../../core":272}],331:[function(require,module,exports){
 
 module.exports = {
     webGL: require('./webgl/WebGLExtract'),
     canvas: require('./canvas/CanvasExtract')
 };
-},{"./canvas/CanvasExtract":326,"./webgl/WebGLExtract":328}],328:[function(require,module,exports){
+},{"./canvas/CanvasExtract":330,"./webgl/WebGLExtract":332}],332:[function(require,module,exports){
 var core = require('../../core'),
     tempRect = new core.Rectangle();
 
@@ -40954,7 +41504,7 @@ WebGLExtract.prototype.destroy = function ()
 
 core.WebGLRenderer.registerPlugin('extract', WebGLExtract);
 
-},{"../../core":268}],329:[function(require,module,exports){
+},{"../../core":272}],333:[function(require,module,exports){
 var core = require('../core'),
     ObservablePoint = require('../core/math/ObservablePoint');
 
@@ -41392,7 +41942,7 @@ BitmapText.prototype.makeDirty = function() {
 
 BitmapText.fonts = {};
 
-},{"../core":268,"../core/math/ObservablePoint":271}],330:[function(require,module,exports){
+},{"../core":272,"../core/math/ObservablePoint":275}],334:[function(require,module,exports){
 var core = require('../core');
 
 /**
@@ -41721,7 +42271,7 @@ MovieClip.fromImages = function (images)
     return new MovieClip(textures);
 };
 
-},{"../core":268}],331:[function(require,module,exports){
+},{"../core":272}],335:[function(require,module,exports){
 var core = require('../core'),
     tempPoint = new core.Point(),
     Texture = require('../core/textures/Texture'),
@@ -42179,7 +42729,7 @@ TilingSprite.fromImage = function (imageId, width, height, crossorigin, scaleMod
     return new TilingSprite(core.Texture.fromImage(imageId, crossorigin, scaleMode),width,height);
 };
 
-},{"../core":268,"../core/sprites/canvas/CanvasTinter":306,"../core/textures/Texture":315,"./webgl/TilingShader":336}],332:[function(require,module,exports){
+},{"../core":272,"../core/sprites/canvas/CanvasTinter":310,"../core/textures/Texture":319,"./webgl/TilingShader":340}],336:[function(require,module,exports){
 var core = require('../core'),
     DisplayObject = core.DisplayObject,
     _tempMatrix = new core.Matrix();
@@ -42518,7 +43068,7 @@ DisplayObject.prototype._cacheAsBitmapDestroy = function ()
     this.destroy();
 };
 
-},{"../core":268}],333:[function(require,module,exports){
+},{"../core":272}],337:[function(require,module,exports){
 var core = require('../core');
 
 /**
@@ -42548,7 +43098,7 @@ core.Container.prototype.getChildByName = function (name)
     return null;
 };
 
-},{"../core":268}],334:[function(require,module,exports){
+},{"../core":272}],338:[function(require,module,exports){
 var core = require('../core');
 
 /**
@@ -42578,7 +43128,7 @@ core.DisplayObject.prototype.getGlobalPosition = function (point)
     return point;
 };
 
-},{"../core":268}],335:[function(require,module,exports){
+},{"../core":272}],339:[function(require,module,exports){
 /**
  * @file        Main export of the PIXI extras library
  * @author      Mat Groves <mat@goodboydigital.com>
@@ -42599,7 +43149,7 @@ module.exports = {
     BitmapText:     require('./BitmapText')
 };
 
-},{"./BitmapText":329,"./MovieClip":330,"./TilingSprite":331,"./cacheAsBitmap":332,"./getChildByName":333,"./getGlobalPosition":334}],336:[function(require,module,exports){
+},{"./BitmapText":333,"./MovieClip":334,"./TilingSprite":335,"./cacheAsBitmap":336,"./getChildByName":337,"./getGlobalPosition":338}],340:[function(require,module,exports){
 var Shader = require('../../core/Shader');
 
 
@@ -42623,7 +43173,7 @@ TilingShader.prototype.constructor = TilingShader;
 module.exports = TilingShader;
 
 
-},{"../../core/Shader":248}],337:[function(require,module,exports){
+},{"../../core/Shader":252}],341:[function(require,module,exports){
 var core = require('../../core'),
     BlurXFilter = require('./BlurXFilter'),
     BlurYFilter = require('./BlurYFilter');
@@ -42743,7 +43293,7 @@ Object.defineProperties(BlurFilter.prototype, {
     }
 });
 
-},{"../../core":268,"./BlurXFilter":338,"./BlurYFilter":339}],338:[function(require,module,exports){
+},{"../../core":272,"./BlurXFilter":342,"./BlurYFilter":343}],342:[function(require,module,exports){
 var core = require('../../core');
 var generateBlurVertSource  = require('./generateBlurVertSource');
 var generateBlurFragSource  = require('./generateBlurFragSource');
@@ -42868,7 +43418,7 @@ Object.defineProperties(BlurXFilter.prototype, {
     }
 });
 
-},{"../../core":268,"./generateBlurFragSource":340,"./generateBlurVertSource":341,"./getMaxBlurKernelSize":342}],339:[function(require,module,exports){
+},{"../../core":272,"./generateBlurFragSource":344,"./generateBlurVertSource":345,"./getMaxBlurKernelSize":346}],343:[function(require,module,exports){
 var core = require('../../core');
 var generateBlurVertSource  = require('./generateBlurVertSource');
 var generateBlurFragSource  = require('./generateBlurFragSource');
@@ -42991,7 +43541,7 @@ Object.defineProperties(BlurYFilter.prototype, {
     }
 });
 
-},{"../../core":268,"./generateBlurFragSource":340,"./generateBlurVertSource":341,"./getMaxBlurKernelSize":342}],340:[function(require,module,exports){
+},{"../../core":272,"./generateBlurFragSource":344,"./generateBlurVertSource":345,"./getMaxBlurKernelSize":346}],344:[function(require,module,exports){
 var GAUSSIAN_VALUES = {
 	5:[0.153388, 0.221461, 0.250301],
 	7:[0.071303, 0.131514, 0.189879, 0.214607],
@@ -43053,7 +43603,7 @@ var generateFragBlurSource = function(kernelSize)
 
 module.exports = generateFragBlurSource;
 
-},{}],341:[function(require,module,exports){
+},{}],345:[function(require,module,exports){
 
 var vertTemplate = [
 	'attribute vec2 aVertexPosition;',
@@ -43119,7 +43669,7 @@ var generateVertBlurSource = function(kernelSize, x)
 
 module.exports = generateVertBlurSource;
 
-},{}],342:[function(require,module,exports){
+},{}],346:[function(require,module,exports){
 
 
 var getMaxKernelSize = function(gl)
@@ -43137,7 +43687,7 @@ var getMaxKernelSize = function(gl)
 
 module.exports = getMaxKernelSize;
 
-},{}],343:[function(require,module,exports){
+},{}],347:[function(require,module,exports){
 var core = require('../../core');
 // @see https://github.com/substack/brfs/issues/25
 
@@ -43694,7 +44244,7 @@ Object.defineProperties(ColorMatrixFilter.prototype, {
     }
 });
 
-},{"../../core":268}],344:[function(require,module,exports){
+},{"../../core":272}],348:[function(require,module,exports){
 var core = require('../../core');
 
 
@@ -43775,7 +44325,7 @@ Object.defineProperties(DisplacementFilter.prototype, {
     }
 });
 
-},{"../../core":268}],345:[function(require,module,exports){
+},{"../../core":272}],349:[function(require,module,exports){
 var core = require('../../core');
 
 
@@ -43810,7 +44360,7 @@ FXAAFilter.prototype.constructor = FXAAFilter;
 
 module.exports = FXAAFilter;
 
-},{"../../core":268}],346:[function(require,module,exports){
+},{"../../core":272}],350:[function(require,module,exports){
 /**
  * @file        Main export of the PIXI filters library
  * @author      Mat Groves <mat@goodboydigital.com>
@@ -43832,7 +44382,7 @@ module.exports = {
     VoidFilter:         require('./void/VoidFilter')
 };
 
-},{"./blur/BlurFilter":337,"./blur/BlurXFilter":338,"./blur/BlurYFilter":339,"./colormatrix/ColorMatrixFilter":343,"./displacement/DisplacementFilter":344,"./fxaa/FXAAFilter":345,"./noise/NoiseFilter":347,"./void/VoidFilter":348}],347:[function(require,module,exports){
+},{"./blur/BlurFilter":341,"./blur/BlurXFilter":342,"./blur/BlurYFilter":343,"./colormatrix/ColorMatrixFilter":347,"./displacement/DisplacementFilter":348,"./fxaa/FXAAFilter":349,"./noise/NoiseFilter":351,"./void/VoidFilter":352}],351:[function(require,module,exports){
 var core = require('../../core');
 
 
@@ -43884,7 +44434,7 @@ Object.defineProperties(NoiseFilter.prototype, {
     }
 });
 
-},{"../../core":268}],348:[function(require,module,exports){
+},{"../../core":272}],352:[function(require,module,exports){
 var core = require('../../core');
 // @see https://github.com/substack/brfs/issues/25
 
@@ -43912,7 +44462,7 @@ VoidFilter.prototype = Object.create(core.Filter.prototype);
 VoidFilter.prototype.constructor = VoidFilter;
 module.exports = VoidFilter;
 
-},{"../../core":268}],349:[function(require,module,exports){
+},{"../../core":272}],353:[function(require,module,exports){
 (function (global){
 // run the polyfills
 require('./polyfill');
@@ -43947,7 +44497,7 @@ Object.assign(core, require('./deprecation'));
 global.PIXI = core;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./accessibility":247,"./core":268,"./deprecation":325,"./extract":327,"./extras":335,"./filters":346,"./interaction":352,"./loaders":355,"./mesh":363,"./particles":366,"./polyfill":372,"./prepare":375}],350:[function(require,module,exports){
+},{"./accessibility":251,"./core":272,"./deprecation":329,"./extract":331,"./extras":339,"./filters":350,"./interaction":356,"./loaders":359,"./mesh":367,"./particles":370,"./polyfill":376,"./prepare":379}],354:[function(require,module,exports){
 var core = require('../core');
 
 /**
@@ -43996,7 +44546,7 @@ InteractionData.prototype.getLocalPosition = function (displayObject, point, glo
     return displayObject.worldTransform.applyInverse(globalPos || this.global, point);
 };
 
-},{"../core":268}],351:[function(require,module,exports){
+},{"../core":272}],355:[function(require,module,exports){
 var core = require('../core'),
     InteractionData = require('./InteractionData'),
     EventEmitter = require('eventemitter3');
@@ -45110,7 +45660,7 @@ InteractionManager.prototype.destroy = function () {
 core.WebGLRenderer.registerPlugin('interaction', InteractionManager);
 core.CanvasRenderer.registerPlugin('interaction', InteractionManager);
 
-},{"../core":268,"./InteractionData":350,"./interactiveTarget":353,"eventemitter3":182}],352:[function(require,module,exports){
+},{"../core":272,"./InteractionData":354,"./interactiveTarget":357,"eventemitter3":186}],356:[function(require,module,exports){
 /**
  * @file        Main export of the PIXI interactions library
  * @author      Mat Groves <mat@goodboydigital.com>
@@ -45127,7 +45677,7 @@ module.exports = {
     interactiveTarget:  require('./interactiveTarget')
 };
 
-},{"./InteractionData":350,"./InteractionManager":351,"./interactiveTarget":353}],353:[function(require,module,exports){
+},{"./InteractionData":354,"./InteractionManager":355,"./interactiveTarget":357}],357:[function(require,module,exports){
 /**
  * Default property values of interactive objects
  * Used by {@link PIXI.interaction.InteractionManager} to automatically give all DisplayObjects these properties
@@ -45217,7 +45767,7 @@ var interactiveTarget = {
 
 module.exports = interactiveTarget;
 
-},{}],354:[function(require,module,exports){
+},{}],358:[function(require,module,exports){
 var Resource = require('resource-loader').Resource,
     core = require('../core'),
     extras = require('../extras'),
@@ -45344,7 +45894,7 @@ module.exports = function ()
     };
 };
 
-},{"../core":268,"../extras":335,"path":3,"resource-loader":242}],355:[function(require,module,exports){
+},{"../core":272,"../extras":339,"path":7,"resource-loader":246}],359:[function(require,module,exports){
 /**
  * @file        Main export of the PIXI loaders library
  * @author      Mat Groves <mat@goodboydigital.com>
@@ -45365,7 +45915,7 @@ module.exports = {
     Resource:           require('resource-loader').Resource
 };
 
-},{"./bitmapFontParser":354,"./loader":356,"./spritesheetParser":357,"./textureParser":358,"resource-loader":242}],356:[function(require,module,exports){
+},{"./bitmapFontParser":358,"./loader":360,"./spritesheetParser":361,"./textureParser":362,"resource-loader":246}],360:[function(require,module,exports){
 var ResourceLoader = require('resource-loader'),
     textureParser = require('./textureParser'),
     spritesheetParser = require('./spritesheetParser'),
@@ -45428,7 +45978,7 @@ var Resource = ResourceLoader.Resource;
 
 Resource.setExtensionXhrType('fnt', Resource.XHR_RESPONSE_TYPE.DOCUMENT);
 
-},{"./bitmapFontParser":354,"./spritesheetParser":357,"./textureParser":358,"resource-loader":242}],357:[function(require,module,exports){
+},{"./bitmapFontParser":358,"./spritesheetParser":361,"./textureParser":362,"resource-loader":246}],361:[function(require,module,exports){
 var Resource = require('resource-loader').Resource,
     path = require('path'),
     core = require('../core');
@@ -45554,7 +46104,7 @@ module.exports = function ()
     };
 };
 
-},{"../core":268,"path":3,"resource-loader":242}],358:[function(require,module,exports){
+},{"../core":272,"path":7,"resource-loader":246}],362:[function(require,module,exports){
 var core = require('../core');
 
 module.exports = function ()
@@ -45576,7 +46126,7 @@ module.exports = function ()
     };
 };
 
-},{"../core":268}],359:[function(require,module,exports){
+},{"../core":272}],363:[function(require,module,exports){
 var core = require('../core'),
     glCore = require('pixi-gl-core'),
     Shader = require('./webgl/MeshShader'),
@@ -46079,7 +46629,7 @@ Mesh.DRAW_MODES = {
     TRIANGLES: 1
 };
 
-},{"../core":268,"./webgl/MeshShader":364,"pixi-gl-core":191}],360:[function(require,module,exports){
+},{"../core":272,"./webgl/MeshShader":368,"pixi-gl-core":195}],364:[function(require,module,exports){
 var DEFAULT_BORDER_SIZE= 10;
 
 var Plane = require('./Plane');
@@ -46404,7 +46954,7 @@ NineSlicePlane.prototype.drawSegment= function (context, textureSource, w, h, x1
     context.drawImage(textureSource, uvs[x1] * w, uvs[y1] * h, sw, sh, vertices[x1], vertices[y1], dw, dh);
 };
 
-},{"./Plane":361}],361:[function(require,module,exports){
+},{"./Plane":365}],365:[function(require,module,exports){
 var Mesh = require('./Mesh');
 
 /**
@@ -46529,7 +47079,7 @@ Plane.prototype._onTextureUpdate = function ()
     }
 };
 
-},{"./Mesh":359}],362:[function(require,module,exports){
+},{"./Mesh":363}],366:[function(require,module,exports){
 var Mesh = require('./Mesh');
 var core = require('../core');
 
@@ -46744,7 +47294,7 @@ Rope.prototype.updateTransform = function ()
     this.containerUpdateTransform();
 };
 
-},{"../core":268,"./Mesh":359}],363:[function(require,module,exports){
+},{"../core":272,"./Mesh":363}],367:[function(require,module,exports){
 /**
  * @file        Main export of the PIXI extras library
  * @author      Mat Groves <mat@goodboydigital.com>
@@ -46763,7 +47313,7 @@ module.exports = {
     MeshShader:     require('./webgl/MeshShader')
 };
 
-},{"./Mesh":359,"./NineSlicePlane":360,"./Plane":361,"./Rope":362,"./webgl/MeshShader":364}],364:[function(require,module,exports){
+},{"./Mesh":363,"./NineSlicePlane":364,"./Plane":365,"./Rope":366,"./webgl/MeshShader":368}],368:[function(require,module,exports){
 var Shader = require('../../core/Shader');
 
 /**
@@ -46811,7 +47361,7 @@ MeshShader.prototype.constructor = MeshShader;
 module.exports = MeshShader;
 
 
-},{"../../core/Shader":248}],365:[function(require,module,exports){
+},{"../../core/Shader":252}],369:[function(require,module,exports){
 var core = require('../core');
 
 /**
@@ -47145,7 +47695,7 @@ ParticleContainer.prototype.destroy = function () {
     this._buffers = null;
 };
 
-},{"../core":268}],366:[function(require,module,exports){
+},{"../core":272}],370:[function(require,module,exports){
 /**
  * @file        Main export of the PIXI extras library
  * @author      Mat Groves <mat@goodboydigital.com>
@@ -47161,7 +47711,7 @@ module.exports = {
     ParticleRenderer: 			 require('./webgl/ParticleRenderer')
 };
 
-},{"./ParticleContainer":365,"./webgl/ParticleRenderer":368}],367:[function(require,module,exports){
+},{"./ParticleContainer":369,"./webgl/ParticleRenderer":372}],371:[function(require,module,exports){
 var glCore = require('pixi-gl-core'),
     createIndicesForQuads = require('../../core/utils/createIndicesForQuads');
 
@@ -47392,7 +47942,7 @@ ParticleBuffer.prototype.destroy = function ()
     this.staticBuffer.destroy();
 };
 
-},{"../../core/utils/createIndicesForQuads":320,"pixi-gl-core":191}],368:[function(require,module,exports){
+},{"../../core/utils/createIndicesForQuads":324,"pixi-gl-core":195}],372:[function(require,module,exports){
 var core = require('../../core'),
     ParticleShader = require('./ParticleShader'),
     ParticleBuffer = require('./ParticleBuffer');
@@ -47824,7 +48374,7 @@ ParticleRenderer.prototype.destroy = function ()
     this.tempMatrix = null;
 };
 
-},{"../../core":268,"./ParticleBuffer":367,"./ParticleShader":369}],369:[function(require,module,exports){
+},{"../../core":272,"./ParticleBuffer":371,"./ParticleShader":373}],373:[function(require,module,exports){
 var Shader = require('../../core/Shader');
 
 /**
@@ -47890,7 +48440,7 @@ ParticleShader.prototype.constructor = ParticleShader;
 
 module.exports = ParticleShader;
 
-},{"../../core/Shader":248}],370:[function(require,module,exports){
+},{"../../core/Shader":252}],374:[function(require,module,exports){
 // References:
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sign
 
@@ -47906,7 +48456,7 @@ if (!Math.sign)
     };
 }
 
-},{}],371:[function(require,module,exports){
+},{}],375:[function(require,module,exports){
 // References:
 // https://github.com/sindresorhus/object-assign
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
@@ -47916,7 +48466,7 @@ if (!Object.assign)
     Object.assign = require('object-assign');
 }
 
-},{"object-assign":184}],372:[function(require,module,exports){
+},{"object-assign":188}],376:[function(require,module,exports){
 require('./Object.assign');
 require('./requestAnimationFrame');
 require('./Math.sign');
@@ -47934,7 +48484,7 @@ if(!window.Uint16Array){
   window.Uint16Array = Array;
 }
 
-},{"./Math.sign":370,"./Object.assign":371,"./requestAnimationFrame":373}],373:[function(require,module,exports){
+},{"./Math.sign":374,"./Object.assign":375,"./requestAnimationFrame":377}],377:[function(require,module,exports){
 (function (global){
 // References:
 // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
@@ -48004,7 +48554,7 @@ if (!global.cancelAnimationFrame) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],374:[function(require,module,exports){
+},{}],378:[function(require,module,exports){
 var core = require('../../core');
 
 /**
@@ -48064,13 +48614,13 @@ CanvasPrepare.prototype.destroy = function()
 };
 
 core.CanvasRenderer.registerPlugin('prepare', CanvasPrepare);
-},{"../../core":268}],375:[function(require,module,exports){
+},{"../../core":272}],379:[function(require,module,exports){
 
 module.exports = {
     webGL: require('./webgl/WebGLPrepare'),
     canvas: require('./canvas/CanvasPrepare')
 };
-},{"./canvas/CanvasPrepare":374,"./webgl/WebGLPrepare":376}],376:[function(require,module,exports){
+},{"./canvas/CanvasPrepare":378,"./webgl/WebGLPrepare":380}],380:[function(require,module,exports){
 var core = require('../../core'),
     SharedTicker = core.ticker.shared;
 
@@ -48374,7 +48924,7 @@ function findGraphics(item, queue)
 }
 
 core.WebGLRenderer.registerPlugin('prepare', WebGLPrepare);
-},{"../../core":268}],377:[function(require,module,exports){
+},{"../../core":272}],381:[function(require,module,exports){
 /**
  * @file animate.js
  * @author David Figatner
@@ -48396,7 +48946,7 @@ module.exports = {
     angle: require('./src/angle.js'),
     target: require('./src/target.js')
 };
-},{"./src/angle.js":379,"./src/animate.js":380,"./src/face.js":381,"./src/shake.js":382,"./src/target.js":383,"./src/tint.js":384,"./src/to.js":385,"./src/wait.js":386}],378:[function(require,module,exports){
+},{"./src/angle.js":383,"./src/animate.js":384,"./src/face.js":385,"./src/shake.js":386,"./src/target.js":387,"./src/tint.js":388,"./src/to.js":389,"./src/wait.js":390}],382:[function(require,module,exports){
 /*
     angle.js <https://github.com/davidfig/anglejs>
     Released under MIT license <https://github.com/davidfig/angle/blob/master/LICENSE>
@@ -48637,7 +49187,7 @@ class Angle
 }
 
 module.exports = new Angle();
-},{}],379:[function(require,module,exports){
+},{}],383:[function(require,module,exports){
 /**
  * @file src/angle.js
  * @author David Figatner
@@ -48680,7 +49230,7 @@ class Angle extends Wait
 }
 
 module.exports = Angle;
-},{"./wait.js":386}],380:[function(require,module,exports){
+},{"./wait.js":390}],384:[function(require,module,exports){
 /**
  * @file src/animate.js
  * @author David Figatner
@@ -48765,7 +49315,7 @@ module.exports = {
     update: update,
     init: init
 };
-},{}],381:[function(require,module,exports){
+},{}],385:[function(require,module,exports){
 /**
  * @file src/face.js
  * @author David Figatner
@@ -48819,7 +49369,7 @@ class Face extends Wait
 }
 
 module.exports = Face;
-},{"./wait.js":386,"yy-angle":378}],382:[function(require,module,exports){
+},{"./wait.js":390,"yy-angle":382}],386:[function(require,module,exports){
 /**
  * @file animate.js
  * @author David Figatner
@@ -48859,7 +49409,7 @@ class Shake extends Wait
 }
 
 module.exports = Shake;
-},{"./wait.js":386}],383:[function(require,module,exports){
+},{"./wait.js":390}],387:[function(require,module,exports){
 /**
  * @file src/target.js
  * @author David Figatner
@@ -48935,7 +49485,7 @@ class Target extends Wait
 }
 
 module.exports = Target;
-},{"./wait.js":386}],384:[function(require,module,exports){
+},{"./wait.js":390}],388:[function(require,module,exports){
 /**
  * @file tint.js
  * @author David Figatner
@@ -49000,7 +49550,7 @@ class Tint extends Wait
 }
 
 module.exports = Tint;
-},{"./wait.js":386}],385:[function(require,module,exports){
+},{"./wait.js":390}],389:[function(require,module,exports){
 /**
  * @file to.js
  * @author David Figatner
@@ -49176,7 +49726,7 @@ class To extends Wait
 }
 
 module.exports = To;
-},{"./wait.js":386}],386:[function(require,module,exports){
+},{"./wait.js":390}],390:[function(require,module,exports){
 /**
  * @file wait.js
  * @author David Figatner
@@ -49400,7 +49950,7 @@ class Wait
 }
 
 module.exports = Wait;
-},{"./animate.js":380}],387:[function(require,module,exports){
+},{"./animate.js":384}],391:[function(require,module,exports){
 /*
     Debug panels for javascript
     debug.js <https://github.com/davidfig/debug>
@@ -50229,567 +50779,6 @@ module.exports = new Debug();
 
 // for eslint
 /* global document, localStorage, window, console */
-},{}],388:[function(require,module,exports){
-/**
- * @file intersects.js
- * @author David Figatner
- * @license MIT
- * Copyright (c) 2016 YOPEY YOPEY LLC
- * {@link https://github.com/davidfig/intersects}
- */
-
-module.exports = {
-    Shape: require('./src/shape.js'),
-    Rectangle: require('./src/rectangle.js'),
-    // Polygon: require('./src/polygon.js'),
-    Circle: require('./src/circle.js')
-};
-},{"./src/circle.js":389,"./src/rectangle.js":390,"./src/shape.js":391}],389:[function(require,module,exports){
-/**
- * @file src/circle.js
- * @author David Figatner
- * @license MIT
- * Copyright (c) 2016 YOPEY YOPEY LLC
- * {@link https://github.com/davidfig/intersects}
- */
-
-const Shape = require('./shape.js');
-
-/** circle shape */
-class Circle extends Shape
-{
-    /**
-     * @param {Article} article that uses this shape
-     * @param {object} [options] - @see {@link Circle.set}
-     */
-    constructor(article, options)
-    {
-        super(article);
-        this.SHAPE = 'Circle';
-        this.AABB = [];
-        options = options || {};
-        this.set(options);
-    }
-
-    /**
-     * @param {object} options
-     * @param {object} [options.positionObject=this.article] use this to update position (and rotation unless rotationObject is defined)
-     * @param {object} [options.rotationObject=this.article] use this to update rotation
-     * @param {number} [options.radius] otherwise article.width / 2 is used as radius
-     */
-    set(options)
-    {
-        this.radius = options.radius || this.article.width / 2;
-        this.radiusSquared = this.radius * this.radius;
-        this.center = options.positionObject ? options.positionObject : this.article;
-        this.rotation = options.rotationObject ? options.rotationObject : (options.positionObject ? options.positionObject : this.article);
-        this.update();
-    }
-
-    /** update AABB */
-    update()
-    {
-        const AABB = this.AABB;
-        const radius = this.radius;
-        const center = this.center;
-        AABB[0] = center.x - radius;
-        AABB[1] = center.y - radius;
-        AABB[2] = center.x + radius;
-        AABB[3] = center.y + radius;
-    }
-
-    /**
-     * Does Circle collide with Circle?
-     * @param {Circle} circle
-     * @return {boolean}
-     */
-    collidesCircle(circle)
-    {
-        const thisCenter = this.center;
-        const center = circle.center;
-        const x = center.x - thisCenter.x;
-        const y = center.y - thisCenter.y;
-        const radii = circle.radius + this.radius;
-        return x * x + y * y <= radii * radii;
-    }
-
-    /**
-     * Does Circle collide with point?
-     * @param {Point} point
-     * @return {boolean}
-     */
-    collidesPoint(point)
-    {
-        const x = point.x - this.center.x;
-        const y = point.y - this.center.y;
-        return x * x + y * y <= this.radiusSquared;
-    }
-
-    /**
-     * Does Circle collide with a line?
-     * from http://stackoverflow.com/a/10392860/1955997
-     * @param {Point} p1
-     * @param {Point} p2
-     * @return {boolean}
-     */
-    collidesLine(p1, p2)
-    {
-        function dot(v1, v2)
-        {
-            return (v1[0] * v2[0]) + (v1[1] * v2[1]);
-        }
-
-        const center = this.center;
-        const ac = [center.x - p1.x, center.y - p1.y];
-        const ab = [p2.x - p1.x, p2.y - p1.y];
-        const ab2 = dot(ab, ab);
-        const acab = dot(ac, ab);
-        let t = acab / ab2;
-        t = (t < 0) ? 0 : t;
-        t = (t > 1) ? 1 : t;
-        let h = [(ab[0] * t + p1.x) - center.x, (ab[1] * t + p1.y) - center.y];
-        const h2 = dot(h, h);
-        return h2 <= this.radiusSquared;
-    }
-
-    /**
-     * Does circle collide with Rectangle?
-     * @param {Rectangle} rectangle
-     */
-    collidesRectangle(rectangle)
-    {
-        // from http://stackoverflow.com/a/402010/1955997
-        if (rectangle.noRotate)
-        {
-            const AABB = rectangle.AABB;
-            const hw = (AABB[2] - AABB[0]) / 2;
-            const hh = (AABB[3] - AABB[1]) / 2;
-            const center = this.center;
-            const radius = this.radius;
-            const distX = Math.abs(center.x - AABB[0]);
-            const distY = Math.abs(center.y - AABB[1]);
-
-            if (distX > hw + radius || distY > hh + radius)
-            {
-                return false;
-            }
-
-            if (distX <= hw || distY <= hh)
-            {
-                return true;
-            }
-
-            const x = distX - hw;
-            const y = distY - hh;
-            return x * x + y * y <= this.radiusSquared;
-        }
-
-        // from http://stackoverflow.com/a/402019/1955997
-        else
-        {
-            const center = this.center;
-            if (rectangle.collidesPoint(center))
-            {
-                return true;
-            }
-
-            const vertices = rectangle.vertices;
-            return this.collidesLine({x: vertices[0], y: vertices[1]}, {x: vertices[2], y: vertices[3]}) ||
-                this.collidesLine({x: vertices[2], y: vertices[3]}, {x: vertices[4], y: vertices[5]}) ||
-                this.collidesLine({x: vertices[4], y: vertices[5]}, {x: vertices[6], y: vertices[7]}) ||
-                this.collidesLine({x: vertices[6], y: vertices[7]}, {x: vertices[0], y: vertices[1]});
-        }
-    }
-}
-
-module.exports = Circle;
-},{"./shape.js":391}],390:[function(require,module,exports){
-/**
- * @file src/rectangle.js
- * @author David Figatner
- * @license MIT
- * Copyright (c) 2016 YOPEY YOPEY LLC
- * {@link https://github.com/davidfig/intersects}
- */
-
-const Shape = require('./shape.js');
-
-class Rectangle extends Shape
-{
-    /**
-     * @param {object} article that uses this shape
-     * @param {object} [options] @see {@link Rectangle.set}
-     */
-    constructor(article, options)
-    {
-        super(article);
-        this.SHAPE = 'Rectangle';
-        options = options || {};
-        this._vertices = [];
-        this.AABB = [0, 0, 0, 0];   // [x1, y1, x2, y2]
-        this.set(options);
-    }
-
-    /**
-     * @param {object} options
-     * @param {number} [options.width] width of object when aligned
-     * @param {number} [options.height] height of object when aligned
-     * @param {number} [options.square] side size of a square
-     * @param {object} [options.center] object to use for position (and rotation, unless separately defined)
-     * @param {object} [options.rotation] object to use for rotation instead of options.center or article
-     * @param {boolean} [options.noRotate] object does not rotate (simplifies math)
-     */
-    set(options)
-    {
-        this.center = options.center || this.article;
-        this.rotation = options.rotation ? options.rotation : (options.center ? options.center : this.article);
-        if (typeof options.square !== 'undefined')
-        {
-            this._width = this._height = options.square;
-        }
-        else
-        {
-            this._width = options.width || this.article.width;
-            this._height = options.height || this.article.height;
-        }
-        this.noRotate = options.noRotate;
-        this.hw = this._width / 2;
-        this.hh = this._height / 2;
-        this.update();
-    }
-
-    /** width of rectangle */
-    get width()
-    {
-        return this._width;
-    }
-    set width(value)
-    {
-        this._width = value;
-        this.hw = value / 2;
-    }
-
-    /** height of rectangle */
-    get height()
-    {
-        return this._height;
-    }
-    set height(value)
-    {
-        this._height = value;
-        this.hh = value / 2;
-    }
-
-    /**
-     * based on http://www.willperone.net/Code/coderr.php
-     * update AABB and sets vertices to dirty
-     */
-    update()
-    {
-        const AABB = this.AABB;
-        const center = this.center;
-
-        if (this.noRotate)
-        {
-            const hw = this.hw;
-            const hh = this.hh;
-            AABB[0] = center.x - hw;
-            AABB[1] = center.y - hh;
-            AABB[2] = center.x + hw;
-            AABB[3] = center.y + hh;
-        }
-        else
-        {
-            // use PIXI's transform for cos and sin, if available
-            const transform = this.rotation.transform;
-            let s, c;
-            if (transform)
-            {
-                s = Math.abs(transform._sr / 2);
-                c = Math.abs(transform._cr / 2);
-            }
-            else
-            {
-                s = Math.abs(Math.sin(this.rotation.rotation) / 2);
-                c = Math.abs(Math.cos(this.rotation.rotation) / 2);
-            }
-
-            const width = this._width;
-            const height = this._height;
-            const ex = height * s + width * c;  // x extent of AABB
-            const ey = height * c + width * s;  // y extent of AABB
-
-            AABB[0] = center.x - ex;
-            AABB[1] = center.y - ey;
-            AABB[2] = center.x + ex;
-            AABB[3] = center.y + ey;
-        }
-        this.verticesDirty = true;
-    }
-
-    /** updates vertices automatically when dirty */
-    updateVertices()
-    {
-        const vertices = this._vertices;
-        const center = this.center;
-        const hw = this.hw;
-        const hh = this.hh;
-        if (this.noRotate)
-        {
-            const AABB = this.AABB;
-            vertices[0] = AABB[0];
-            vertices[1] = AABB[1];
-            vertices[2] = AABB[2];
-            vertices[3] = AABB[1];
-            vertices[4] = AABB[2];
-            vertices[5] = AABB[3];
-            vertices[6] = AABB[0];
-            vertices[7] = AABB[3];
-        }
-        else
-        {
-            function xCalc(x, y)
-            {
-                return center.x + x * cos - y * sin;
-            }
-
-            function yCalc(x, y)
-            {
-                return center.y + x * sin + y * cos;
-            }
-
-            const transform = this.rotation.transform;
-            const sin = transform._sr;
-            const cos = transform._cr;
-
-            vertices[0] = xCalc(-hw, -hh);
-            vertices[1] = yCalc(-hw, -hh);
-            vertices[2] = xCalc(+hw, -hh);
-            vertices[3] = yCalc(+hw, -hh);
-            vertices[4] = xCalc(+hw, +hh);
-            vertices[5] = yCalc(+hw, +hh);
-            vertices[6] = xCalc(-hw, +hh);
-            vertices[7] = yCalc(-hw, +hh);
-        }
-        this.verticesDirty = false;
-    }
-
-    /** sets vertices Array[8] */
-    get vertices()
-    {
-        if (this.verticesDirty)
-        {
-            this.updateVertices();
-        }
-        return this._vertices;
-    }
-
-    /**
-     * Does Rectangle collide Rectangle?
-     * @param {Rectangle} rectangle
-     * @return {boolean}
-     */
-    collidesRectangle(rectangle)
-    {
-        if (this.noRotate && rectangle.noRotate)
-        {
-            return this.AABBs(rectangle.AABB);
-        }
-        else
-        {
-            return this.collidesPolygon(rectangle);
-        }
-    }
-
-    /**
-     * Does Rectangle collide Circle?
-     * @param {Circle} circle
-     * @return {boolean}
-     */
-    collidesCircle(circle)
-    {
-        return circle.collidesRectangle(this);
-    }
-}
-
-module.exports = Rectangle;
-},{"./shape.js":391}],391:[function(require,module,exports){
-/**
- * @file src/shape.js
- * @author David Figatner
- * @license MIT
- * Copyright (c) 2016 YOPEY YOPEY LLC
- * {@link https://github.com/davidfig/intersects}
- */
-
-/** base class of all shapes */
-class Shape
-{
-    /**
-     * @param {object} [article] that uses this shape
-     */
-    constructor(article)
-    {
-        this.article = article;
-    }
-
-    update() {}
-
-    /**
-     * collides with this shape's AABB box
-     * @param {object} AABB
-     */
-    AABBs(AABB)
-    {
-        var AABB2 = this.AABB;
-        return !(AABB[2] < AABB2[0] || AABB2[2] < AABB[0] || AABB[3] < AABB2[1] || AABB2[3] < AABB[1]);
-    }
-
-    /**
-     * point-polygon collision test based on this.vertices
-     * based on http://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon/2922778#2922778
-     * @param {Point} point
-     * @return {boolean}
-     */
-    collidesPoint(point)
-    {
-        const vertices = this.vertices;
-        const length = vertices.length;
-        let c = false;
-        for (let i = 0, j = length - 2; i < length; i += 2)
-        {
-            if (((vertices[i + 1] > point.y) !== (vertices[j + 1] > point.y)) && (point.x < (vertices[j] - vertices[i]) * (point.y - vertices[i + 1]) / (vertices[j + 1] - vertices[i + 1]) + vertices[i]))
-            {
-                c = !c;
-            }
-            j = i;
-        }
-        return c;
-    }
-
-    collidesCircle() {}
-    collidesRectangle() {}
-
-    /**
-     * Does Polygon collide Polygon or AABB?
-     * based on http://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
-     * @param {Array} polygon
-     * @param {boolean} isAABB
-     * @return {boolean}
-     */
-    collidesPolygon(polygon, isAABB)
-    {
-        const a = this.vertices;
-        const b = isAABB ? polygon : polygon.vertices;
-        const polygons = [a, b];
-        let minA, maxA, projected, minB, maxB;
-        for (let i = 0; i < polygons.length; i++)
-        {
-            const polygon = polygons[i];
-            for (let i1 = 0; i1 < polygon.length; i1 += 2)
-            {
-                var i2 = (i1 + 2) % polygon.length;
-                var normal = { x: polygon[i2 + 1] - polygon[i1 + 1], y: polygon[i1] - polygon[i2] };
-                minA = maxA = null;
-                for (let j = 0; j < a.length; j += 2)
-                {
-                    projected = normal.x * a[j] + normal.y * a[j + 1];
-                    if (minA === null || projected < minA)
-                    {
-                        minA = projected;
-                    }
-                    if (maxA === null || projected > maxA)
-                    {
-                        maxA = projected;
-                    }
-                }
-                minB = maxB = null;
-                for (let j = 0; j < b.length; j += 2)
-                {
-                    projected = normal.x * b[j] + normal.y * b[j + 1];
-                    if (minB === null || projected < minB)
-                    {
-                        minB = projected;
-                    }
-                    if (maxB === null || projected > maxB)
-                    {
-                        maxB = projected;
-                    }
-                }
-                if (maxA < minB || maxB < minA)
-                {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Does polygon collide Line?
-     * @param {Point} p1
-     * @param {Point} p2
-     * @return {boolean}
-     */
-    collidesLine(p1, p2)
-    {
-        const vertices = this.vertices;
-        const length = vertices.length;
-
-        // check if first point is inside the shape (this covers if the line is completely enclosed by the shape)
-        if (this.collidesPoint(p1))
-        {
-            return true;
-        }
-
-        // check for intersections for all of the sides
-        for (let i = 0; i < length; i += 2)
-        {
-            const j = (i + 2) % length;
-            if (Shape.lineLine(p1, p2, {x: vertices[i], y: vertices[i + 1]}, {x: vertices[j], y: vertices[j + 1]}))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** catch all for automatic collision checking */
-    collides(shape)
-    {
-        return this['collides' + shape.SHAPE](shape);
-    }
-
-    /**
-     * Do two lines intersect?
-     * from http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-     * @param {Point} p1
-     * @param {Point} p2
-     * @param {Point} p3
-     * @param {Point} p4
-     * @return {boolean}
-     */
-    static lineLine(p1, p2, p3, p4)
-    {
-        const p0_x = p1.x;
-        const p0_y = p1.y;
-        const p1_x = p2.x;
-        const p1_y = p2.y;
-        const p2_x = p3.x;
-        const p2_y = p3.y;
-        const p3_x = p4.x;
-        const p3_y = p4.y;
-        const s1_x = p1_x - p0_x;
-        const s1_y = p1_y - p0_y;
-        const s2_x = p3_x - p2_x;
-        const s2_y = p3_y - p2_y;
-        const s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
-        const t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
-        return s >= 0 && s <= 1 && t >= 0 && t <= 1;
-    }
-}
-
-module.exports = Shape;
 },{}],392:[function(require,module,exports){
 /**
  * @file renderer.js
@@ -51561,4 +51550,4 @@ module.exports = new Update();
 
 // for eslint
 /* globals performance, requestAnimationFrame, setTimeout, window, document */
-},{}]},{},[1,2]);
+},{}]},{},[5,6]);

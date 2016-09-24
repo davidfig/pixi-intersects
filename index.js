@@ -5,6 +5,7 @@ const Renderer = require('yy-renderer');
 const Animate = require('yy-animate');
 const Update = require('yy-update');
 const Intersects = require('yy-intersects');
+// const Intersects = require('../intersects/intersects.js');
 
 // initialize
 Debug.init();
