@@ -9,6 +9,6 @@
 module.exports = {
     Shape: require('./src/shape.js'),
     Rectangle: require('./src/rectangle.js'),
-    // Polygon: require('./src/polygon.js'),
+    Polygon: require('./src/polygon.js'),
     Circle: require('./src/circle.js')
 };
