@@ -194,6 +194,12 @@ class Rectangle extends Shape
     {
         return circle.collidesRectangle(this);
     }
+
+    static fromRectangle(x, y, width, height)
+    {
+        const center = {x: x + width / 2, y: y + height / 2};
+        return new Rectangle(center, {width: width, height: height, noRotate: true});
+    }
 }
 
 module.exports = Rectangle;
