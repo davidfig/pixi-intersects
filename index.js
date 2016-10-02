@@ -4,8 +4,7 @@ const Debug = require('yy-debug');
 const Renderer = require('yy-renderer');
 const Animate = require('yy-animate');
 const Update = require('yy-update');
-const Intersects = require('yy-intersects');
-// const Intersects = require('../intersects/intersects.js');
+const Intersects = require('../intersects/intersects.js');
 
 // initialize
 Debug.init();
@@ -31,6 +30,7 @@ lineCircle(300, 500);
 circleRectangle(650, 590);
 lineAABB(600, 300);
 AABBRectangle(100, 590);
+polygonRectangle(1100, 100);
 
 Update.update();
 
@@ -40,7 +40,7 @@ function pointInAABB(x, y)
     var s = square(80, 0x00ff00, x, y);
     s.shape = new Intersects.Rectangle(null, {center: new PIXI.Point(x, y), square: 80, noRotate: true});
     var c = circle(5, 0, x + 75, y);
-    text('Point-AABB', x, y + 68);
+    text('Point-Rectangle', x, y + 68);
     new Animate.to(c, {x: x - 100, y: y - 20}, 4000, {reverse: true, repeat: true, onEach:
         function()
         {
@@ -192,12 +192,12 @@ function lineAABB(x, y)
 {
     var s = square(80, 0x00ff00, x, y);
     s.alpha = 0.5;
-    s.shape = new Intersects.Rectangle(null, {center: new PIXI.Point(x, y), square: 80, noRotate: true});
+    s.shape = Intersects.Rectangle.fromRectangle(x - 40, y - 40, 80, 80);//(null, {center: new PIXI.Point(x, y), square: 80, noRotate: true});
     var p1 = {x: x, y: y};
     var p2 = {x: x, y: y + 100};
     var g = renderer.add(new PIXI.Graphics());
     g.alpha = 0.5;
-    text('line-AABB', x, y + 120);
+    text('line-Rectangle', x, y + 120);
     new Animate.to(p1, {x: x - 150}, 4000, {repeat: true, reverse: true, onEach:
         function()
         {
@@ -220,6 +220,30 @@ function AABBRectangle(x, y)
             s.shape.update();
             s.tint = s2.tint = s2.shape.collides(s.shape) ? 0xff0000 : 0x00ff00;
         }, ease: Easing.easeInOutQuad});
+    text('Rectangle-Rectangle', x, y + 50);
+}
+
+function polygonRectangle(x, y)
+{
+    var s = square(60, 0x00ff00, x + 100, y);
+    s.alpha = 0.25;
+    s.shape = new Intersects.Rectangle(s);
+    var g = renderer.add(new PIXI.Graphics());
+    g.alpha = 0.25;
+    g.position.set(x, y);
+    const points = [0, 0, 100, 50, 150, 150, 25, 125];
+    const p = polygon(g, points, 0x00ff00);
+    p.shape = new Intersects.Polygon(p, points);
+    new Animate.to(g, {x: x - 25, y: y - 25, rotation: -Math.PI}, 3000, {reverse: true, repeat: true, onEach:
+        function()
+        {
+            p.shape.update();
+            s.tint = p.shape.AABBs(s.shape.AABB) ? 0x0000ff : 0x00ff00;
+            s.tint = p.shape.collides(s.shape) ? 0xff0000 : s.tint;
+            g.clear();
+            polygon(g, points, s.tint);
+        }, ease: Easing.easeInOutSine});
+    text('Polygon-Rectangle', x, y + 150);
 }
 
 // draw a square
@@ -244,6 +268,14 @@ function circle(size, color, x, y)
     circle.tint = color;
     circle.position.set(x, y);
     return circle;
+}
+
+function polygon(g, points, color)
+{
+    g.beginFill(color);
+    g.drawPolygon(points);
+    g.endFill();
+    return g;
 }
 
 // draw a line
