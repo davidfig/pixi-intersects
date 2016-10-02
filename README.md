@@ -30,6 +30,9 @@ https://davidfig.github.io/intersects/
 <dt><a href="#Circle">Circle</a></dt>
 <dd><p>circle shape</p>
 </dd>
+<dt><a href="#Polygon">Polygon</a></dt>
+<dd><p>Polygon</p>
+</dd>
 <dt><a href="#Rectangle">Rectangle</a></dt>
 <dd></dd>
 <dt><a href="#Shape">Shape</a></dt>
@@ -124,6 +127,70 @@ Does circle collide with Rectangle?
 | Param | Type |
 | --- | --- |
 | rectangle | <code>[Rectangle](#Rectangle)</code> | 
+
+<a name="Polygon"></a>
+
+## Polygon
+Polygon
+
+**Kind**: global class  
+
+* [Polygon](#Polygon)
+    * [new Polygon(article, points, [options])](#new_Polygon_new)
+    * [.set(options)](#Polygon+set)
+    * [.update()](#Polygon+update)
+    * [.collidesRectangle(rectangle)](#Polygon+collidesRectangle) ⇒ <code>boolean</code>
+    * [.collidesCircle(circle)](#Polygon+collidesCircle) ⇒ <code>boolean</code>
+
+<a name="new_Polygon_new"></a>
+
+### new Polygon(article, points, [options])
+
+| Param | Type | Description |
+| --- | --- | --- |
+| article | <code>Article</code> | that uses this shape |
+| points | <code>array</code> | in the form of [x, y, x2, y2, x3, y3, . . .] |
+| [options] | <code>object</code> | @see [Polygon.set](Polygon.set) |
+
+<a name="Polygon+set"></a>
+
+### polygon.set(options)
+**Kind**: instance method of <code>[Polygon](#Polygon)</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| options | <code>object</code> |  |
+| options.points | <code>Array.&lt;PIXI.Point&gt;</code> |  |
+| [options.center] | <code>PIXI.DisplayObject</code> | object to use for position (and rotation, unless separately defined) |
+| [options.rotation] | <code>PIXI.DisplayObject</code> | object to use for rotation instead of options.center or article |
+
+<a name="Polygon+update"></a>
+
+### polygon.update()
+based on http://www.willperone.net/Code/coderr.php
+
+**Kind**: instance method of <code>[Polygon](#Polygon)</code>  
+<a name="Polygon+collidesRectangle"></a>
+
+### polygon.collidesRectangle(rectangle) ⇒ <code>boolean</code>
+Does Rectangle collide Rectangle?
+
+**Kind**: instance method of <code>[Polygon](#Polygon)</code>  
+
+| Param | Type |
+| --- | --- |
+| rectangle | <code>[Rectangle](#Rectangle)</code> | 
+
+<a name="Polygon+collidesCircle"></a>
+
+### polygon.collidesCircle(circle) ⇒ <code>boolean</code>
+Does Rectangle collide Circle?
+
+**Kind**: instance method of <code>[Polygon](#Polygon)</code>  
+
+| Param | Type |
+| --- | --- |
+| circle | <code>[Circle](#Circle)</code> | 
 
 <a name="Rectangle"></a>
 
