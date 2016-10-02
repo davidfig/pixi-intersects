@@ -103,7 +103,7 @@ class Polygon extends Shape
      */
     collidesCircle(circle)
     {
-        return circle.collidesRectangle(this);
+        return circle.collidesPolygon(this);
     }
 }
 

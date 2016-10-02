@@ -151,6 +151,26 @@ class Circle extends Shape
                 this.collidesLine({x: vertices[6], y: vertices[7]}, {x: vertices[0], y: vertices[1]});
         }
     }
+
+    // from http://stackoverflow.com/a/402019/1955997
+    collidesPolygon(polygon)
+    {
+        const center = this.center;
+        if (polygon.collidesPoint(center))
+        {
+            return true;
+        }
+        const vertices = polygon.vertices;
+        const count = vertices.length;
+        for (let i = 0; i < count - 2; i += 2)
+        {
+            if (this.collidesLine({x: vertices[i], y: vertices[i + 1]}, {x: vertices[i + 2], y: vertices[i + 3]}))
+            {
+                return true;
+            }
+        }
+        return this.collidesLine({x: vertices[0], y: vertices[1]}, {x: vertices[count - 2], y: vertices[count - 1]});
+    }
 }
 
 module.exports = Circle;
