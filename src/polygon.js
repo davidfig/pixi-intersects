@@ -83,7 +83,8 @@ class Polygon extends Shape
         this.AABB[1] = minY;
         this.AABB[2] = maxX;
         this.AABB[3] = maxY;
-
+        this.hw = (maxX - minX) / 2;
+        this.hh = (maxY - minY) / 2;
     }
 
     /**
