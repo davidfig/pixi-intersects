@@ -94,19 +94,8 @@ class Rectangle extends Shape
         }
         else
         {
-            // use PIXI's transform for cos and sin, if available
-            const transform = this.rotation.transform;
-            let s, c;
-            if (transform)
-            {
-                s = Math.abs(transform._sr / 2);
-                c = Math.abs(transform._cr / 2);
-            }
-            else
-            {
-                s = Math.abs(Math.sin(this.rotation.rotation) / 2);
-                c = Math.abs(Math.cos(this.rotation.rotation) / 2);
-            }
+            const s = Math.abs(Math.sin(this.rotation.rotation) / 2);
+            const c = Math.abs(Math.cos(this.rotation.rotation) / 2);
 
             const width = this._width;
             const height = this._height;
@@ -142,9 +131,9 @@ class Rectangle extends Shape
         }
         else
         {
-            const transform = this.rotation.transform;
-            const sin = transform._sr;
-            const cos = transform._cr;
+            const rotation = this.rotation.rotation;
+            const sin = Math.sin(rotation);
+            const cos = Math.cos(rotation);
 
             vertices[0] = center.x - hw * cos + hh * sin;
             vertices[1] = center.y - hw * sin - hh * cos;

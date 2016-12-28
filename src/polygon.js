@@ -49,19 +49,9 @@ class Polygon extends Shape
      */
     update()
     {
-        // use PIXI's transform for cos and sin, if available
-        const transform = this.rotation.transform;
-        let sin, cos;
-        if (transform)
-        {
-            sin = transform._sr;
-            cos = transform._cr;
-        }
-        else
-        {
-            sin = Math.sin(this.rotation.rotation);
-            cos = Math.cos(this.rotation.rotation);
-        }
+        const rotation = this.rotation.rotation;
+        const sin = Math.sin(rotation);
+        const cos = Math.cos(rotation);
 
         let minX = Infinity, maxX = 0, minY = Infinity, maxY = 0;
         const points = this.points;
