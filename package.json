@@ -1,6 +1,6 @@
 {
   "name": "yy-intersects",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "shape collision / intersects library for pixi.js",
   "main": "intersects.js",
   "scripts": {
