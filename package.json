@@ -4,9 +4,9 @@
   "description": "demo for github.com/davidfig/intersects/",
   "main": "index.html",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "install": "node_modules/.bin/browserify *.js -u index.compiled.js > index.compiled.js",
-    "watch": "node_modules/.bin/watchify *.js -u index.compiled.js -vo index.compiled.js"
+    "test": "live-server",
+    "install": "node_modules/.bin/browserify index.js > index.compiled.js",
+    "watch": "node_modules/.bin/watchify index.js -vo index.compiled.js"
   },
   "repository": {
     "type": "git",

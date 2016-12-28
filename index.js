@@ -1,5 +1,4 @@
 const PIXI = require('pixi.js');
-const Easing = require('penner');
 const Debug = require('yy-debug');
 const Renderer = require('yy-renderer');
 const Animate = require('yy-animate');
@@ -45,7 +44,7 @@ function pointInAABB(x, y)
         function()
         {
             s.tint = s.shape.collidesPoint(c) ? 0xff0000 : 0x00ff00;
-        }, ease: Easing.easeInOutSine});
+        }, ease: 'easeInOutSine'});
 }
 
 // point and rectangle
@@ -61,7 +60,7 @@ function pointInRectangle(x, y)
         {
             s.tint = s.shape.AABBs([c.x, c.y, c.x, c.y]) ? 0x0000ff : 0x00ff00;
             s.tint = s.shape.collidesPoint(c) ? 0xff0000 : s.tint;
-        }, ease: Easing.easeInOutSine});
+        }, ease: 'easeInOutSine'});
 }
 
 // line and line
@@ -80,7 +79,7 @@ function lineLine(x, y)
             line(g, l1, l2, 0);
             var intersect = Intersects.Shape.lineLine(l1, l2, p1, p2);
             line(g, p1, p2, intersect ? 0xff0000 : 0x00ff00);
-        }, ease: Easing.easeInOutSine});
+        }, ease: 'easeInOutSine'});
 }
 
 // line and Rectangle
@@ -101,7 +100,7 @@ function lineRectangle(x, y)
         {
             s.shape.update();
             s.tint = s.shape.collidesLine(p1, p2) ? 0xff0000 : 0x00ff00;
-        }, reverse: true, repeat: true, ease: Easing.easeInOutSine});
+        }, reverse: true, repeat: true, ease: 'easeInOutSine'});
 }
 
 // two Rectangles
@@ -127,11 +126,11 @@ function rectangleRectangle(x, y)
             s2.shape.update();
             s1.children[0].tint = s2.tint = s1.shape.AABBs(s2.shape.AABB) ? 0x0000ff : 0x00ff00;
             s1.children[0].tint = s2.tint = s1.shape.collidesRectangle(s2.shape) ? 0xff0000 : s2.tint;
-        }, reverse: true, repeat: true, ease: Easing.easeInOutSine});
-    new Animate.to(s2, {x: x - 200, y: y - 25, rotation: Math.PI}, 3000, {repeat: true, reverse: true, ease: Easing.easeInOutSine});
+        }, reverse: true, repeat: true, ease: 'easeInOutSine'});
+    new Animate.to(s2, {x: x - 200, y: y - 25, rotation: Math.PI}, 3000, {repeat: true, reverse: true, ease: 'easeInOutSine'});
 }
 
-// AABB-circle testing is as expensive as circle-circle testing, so it's ommitted
+// two circles
 function circleCircle(x, y)
 {
     var c1 = circle(50, 0x00ff00, x - 100, y);
@@ -143,9 +142,10 @@ function circleCircle(x, y)
     new Animate.to(c1, {x: x + 100, y: y + 25}, 4000, {repeat: true, reverse: true, onEach:
         function()
         {
-            c1.tint = c2.tint = c1.shape.collidesCircle(c2.shape) ? 0xff0000 : 0x00ff00;
-        }, ease: Easing.easeInOutSine});
-    new Animate.to(c2, {x: x - 100, y: y - 25}, 2000, {repeat: true, reverse: true, ease: Easing.easeInOutSine});
+            c1.tint = c2.tint = c1.shape.AABBs(c2.shape.AABB) ? 0x0000ff : 0x00ff00;
+            c1.tint = c2.tint = c1.shape.collidesCircle(c2.shape) ? 0xff0000 : c1.tint;
+        }, ease: 'easeInOutSine'});
+    new Animate.to(c2, {x: x - 100, y: y - 25}, 2000, {repeat: true, reverse: true, ease: 'easeInOutSine'});
 }
 
 function lineCircle(x, y)
@@ -162,7 +162,7 @@ function lineCircle(x, y)
         function()
         {
             c.tint = c.shape.collidesLine(p1, p2) ? 0xff0000 : 0x00ff00;
-        }, ease: Easing.easeInOutSine});
+        }, ease: 'easeInOutSine'});
 }
 
 function circleRectangle(x, y)
@@ -174,15 +174,15 @@ function circleRectangle(x, y)
     c.alpha = rectangle.alpha = 0.5;
     text('Circle-Rectangle', x + 75, y + 50);
     new Animate.to(rectangle, {rotation: Math.PI * 2}, 13000, {repeat: true});
-    new Animate.to(rectangle, {x: x + 50}, 2000, {repeat: true, reverse: true, ease: Easing.easeInOutSine});
+    new Animate.to(rectangle, {x: x + 50}, 2000, {repeat: true, reverse: true, ease: 'easeInOutSine'});
     new Animate.to(c, {x: x + 100, y: y - 10}, 3000, {repeat: true, reverse: true, onEach:
         function()
         {
             c.shape.update();
             rectangle.shape.update();
             c.tint = rectangle.tint = c.shape.AABBs(rectangle.shape.AABB) ? 0x0000ff : 0x00ff00;
-            c.tint = rectangle.tint = c.shape.collidesRectangle(rectangle.shape) ? 0xff0000 : 0x00ff00;
-        }, ease: Easing.easeInOutSine});
+            c.tint = rectangle.tint = c.shape.collidesRectangle(rectangle.shape) ? 0xff0000 : c.tint;
+        }, ease: 'easeInOutSine'});
 
     var t = text('Circle-Container', x, y + 120);
     t.x += t.width / 2;
@@ -204,7 +204,7 @@ function lineAABB(x, y)
             g.clear();
             line(g, p1, p2);
             s.tint = s.shape.collidesLine(p1, p2) ? 0xff0000 : 0x00ff00;
-        }, ease: Easing.easeInOutSine});
+        }, ease: 'easeInOutSine'});
 }
 
 function AABBRectangle(x, y)
@@ -219,7 +219,7 @@ function AABBRectangle(x, y)
         {
             s.shape.update();
             s.tint = s2.tint = s2.shape.collides(s.shape) ? 0xff0000 : 0x00ff00;
-        }, ease: Easing.easeInOutQuad});
+        }, ease: 'easeInOutQuad'});
     text('Rectangle-Rectangle', x, y + 50);
 }
 
@@ -242,7 +242,7 @@ function polygonRectangle(x, y)
             s.tint = p.shape.collides(s.shape) ? 0xff0000 : s.tint;
             g.clear();
             polygon(g, points, s.tint);
-        }, ease: Easing.easeInOutSine});
+        }, ease: 'easeInOutSine'});
     text('Polygon-Rectangle', x, y + 150);
 }
 
